@@ -51,7 +51,7 @@ jobs:
 
       - name: Build the wasm and JS artifacts
         run: |
-          scripts/build-wasm.sh
+          bash scripts/build-wasm.sh
           node scripts/build-js.mjs
 
       - name: Run the package tests
