@@ -30,9 +30,11 @@ the original repo; we sync from it and try hard not to diverge (see
    in the PR — it costs us on every rebase.
 2. **OpenCL is excluded from the WASM target.** Never add `clwrapper`,
    `gpu_opencl/`, `*_gpu.cpp`, or `.cl` kernels to the wasm build. The
-   long-term fate of the GPU-only algorithms (thermal erosion family,
-   `hydraulic_{mcdonald,schott,vpipes}`, `rifts`, `advection_*`) is CPU
-   ports — see §2 of the research doc for the definitive list.
+   long-term fate of the GPU-only algorithms (most of the thermal erosion
+   family, `hydraulic_{mcdonald,schott,vpipes}`, `rifts`, `advection_*`)
+   is CPU ports — see §2 of the research doc for the definitive list.
+   Note that `thermal_schott` already has a CPU implementation
+   (`src/erosion/thermal_schott.cpp`) and only needs binding.
 3. **CPU-first, sequential-first.** The wasm target compiles with
    `-fno-openmp` and uses `ComputeMode::VA_SEQUENTIAL`. Threading
    (Emscripten pthreads) is a later, optional phase.
@@ -46,9 +48,14 @@ the original repo; we sync from it and try hard not to diverge (see
 ## Current status
 
 - [x] Research complete (`docs/wasm-port-research.md`)
-- [ ] Phase 1: `highmap_wasm` CMake target + embind surface + smoke test
-- [ ] Phase 2: CPU ports of GPU-only algorithms
-- [ ] Phase 3: CI, benchmarks, packaging
+- [x] Phase 1: `highmap_wasm` CMake target + embind surface + smoke test
+      (archived bootstrap change, 2026-11-05)
+- [x] Terrain showcase: static GitHub Pages gallery of example-faithful
+      specimens (archived showcase change, 2026-11-05)
+- [ ] Phase 2: CPU ports of GPU-only algorithms — **next**; start with the
+      thermal family, excluding `thermal_schott` (already CPU)
+- [ ] Phase 3: benchmarks, optional pthreads build, npm publish (CI and
+      Pages already shipped)
 
 ## Conventions
 

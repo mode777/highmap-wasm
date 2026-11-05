@@ -52,7 +52,6 @@ upstream tree — the sediment transport step divides by the local water level,
 which can hit exact zero, and one NaN then spreads through the Laplace
 regularization (verified against the CPU code path; not a port artifact).
 Revisit with an upstream fix; see AD-013 in docs/decisions.md.
-| `hydraulicStream` | `hmap::hydraulic_stream` | `(z&, cErosion, talusRef, ir, clippingRatio)` | `ir: 1, clippingRatio: 10` |
 
 The **high-level JS API** (`initHighmap()`) exposes these under pyHighMap
 names — `clamp` and `remap` for the two `*Values` bindings, with options

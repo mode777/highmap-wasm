@@ -96,3 +96,13 @@ marks the old one superseded — entries are never edited in place.
   README. Upstream content remains available in git history and at
   ottolink-dev/HighMap; flag on rebases if upstream changes its README
   substantially.
+- **AD-016 — Planning docs are a living plan.** (2026-11-05) The research doc
+  now reflects post-bootstrap state: phase 1 (build, embind surface, npm
+  package) and the Pages showcase are complete, and phase 2 is next.
+  Correction to its §2 GPU-only list: `thermal_schott` has a CPU
+  implementation upstream (`src/erosion/thermal_schott.cpp`) and is bindable
+  without a port; the other nine thermal variants remain GPU-only. Phase 3's
+  remaining scope is benchmarks, the optional pthreads build, and npm publish
+  (CI and Pages shipped with the showcase). Rationale: the original research
+  snapshot predates the bootstrap and showcase work, and stale planning claims
+  would otherwise inflate the next change's scope.

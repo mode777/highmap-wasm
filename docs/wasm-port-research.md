@@ -1,6 +1,7 @@
 # WASM port — research notes
 
-Status: **research / planning phase** (no build wired up yet).
+Status: **living plan** (research complete; phase 1 and the showcase have
+shipped; phase 2 is next). Last updated 2026-11-05.
 Research base: fork of [ottolink-dev/HighMap](https://github.com/ottolink-dev/HighMap)
 at commit `4fb63ae6` (*Merge pull request #463 from ottolink-dev/perf/trench*), 2026-11-05.
 An earlier pass was done on the copy pinned by the Hesiod submodule
@@ -69,7 +70,7 @@ files + `gpu_opencl/` + CLWrapper and call the CPU functions.
 
 | GPU-only file | Missing CPU implementation | ~Kernel LOC |
 |---|---|---|
-| `erosion/thermal_gpu.cpp` | the entire thermal family: `thermal`, `thermal_auto_bedrock`, `thermal_conserve`, `thermal_flatten`, `thermal_rib`, `thermal_ridge`, `thermal_scree`, `thermal_olsen`, `thermal_inflate` | ~660 C++ + kernels |
+| `erosion/thermal_gpu.cpp` | the thermal family except `thermal_schott`: `thermal`, `thermal_auto_bedrock`, `thermal_conserve`, `thermal_flatten`, `thermal_rib`, `thermal_ridge`, `thermal_scree`, `thermal_olsen`, `thermal_inflate` | ~660 C++ + kernels |
 | `erosion/hydraulic_mcdonald_gpu.cpp` | `hydraulic_mcdonald` | 360 |
 | `erosion/hydraulic_schott_gpu.cpp` | `hydraulic_schott` | 218 |
 | `erosion/hydraulic_vpipes_gpu.cpp` | `hydraulic_vpipes` | 225 |
@@ -84,6 +85,13 @@ Total: ~1,850 lines of C++ launch code + ~2,400 lines of OpenCL C across
 features (plain float buffers, no images/samplers) — so they port to
 plain C++ loops without conceptual difficulty, but the code has to be
 written and validated.
+
+**Correction (2026-11-05):** `thermal_schott` is *not* porting work.
+Upstream ships a CPU implementation in `erosion/thermal_schott.cpp`; the
+GPU file merely wraps it. Binding it is a curated-source-list addition
+(`thermal_schott.cpp`) plus a manifest/binding entry. The other nine
+thermal variants above remain GPU-only, so the remaining porting volume is
+the §2 total minus the `thermal_schott` launch path and kernel.
 
 ## 3. Dependency audit for emscripten
 
@@ -141,18 +149,25 @@ sequential execution mode already exists. OpenCL cannot run in browsers;
 WebGPU/WGSL could be a long-term successor for the GPU-only algorithms but
 is a much larger rewrite and is out of scope for v1.
 
-Suggested phases:
+Phases:
 
-1. **Bootstrap (1–2 weeks)** — new `highmap_wasm` CMake target with a
-   curated source list (drop `export/`, `gpu_opencl/`, `*_gpu.cpp`,
-   OpenCV/assimp/EXR/GSL-dependent files); replace the two GSL uses; wire
-   `emcmake` + embind (`Array`, `noise_fbm`, filters, `warp`, CPU erosion);
-   smoke-test page. Expected module ~2–5 MB.
-2. **CPU ports of GPU-only algorithms (2–4 weeks)** — thermal family,
-   `hydraulic_{mcdonald,schott,vpipes}`, `rifts`, `advection_*`; validate
-   against desktop OpenCL output (same seeds/parameters).
-3. **Harden & publish** — CI (GitHub Actions emscripten build), benchmark
-   page, optional pthreads build, decide npm packaging.
+1. **Bootstrap — done (2026-11-05, 1–2 weeks estimated).** New
+   `highmap_wasm` CMake target with a curated source list (no `export/`,
+   `gpu_opencl/`, `*_gpu.cpp`, OpenCV/assimp/EXR/GSL-dependent files); GSL
+   SVD replaced by an Eigen shim; embind surface per
+   `HighMap/wasm/manifest.md`; npm package with Node smoke tests. See
+   `openspec/changes/archive/2026-11-05-bootstrap-wasm-package/`. The
+   shipped module is ~0.5 MB wasm, below the 2–5 MB estimate.
+2. **CPU ports of GPU-only algorithms — next (2–4 weeks).** Thermal family
+   (minus `thermal_schott`, which already has a CPU implementation — see
+   the §2 correction), `hydraulic_{mcdonald,schott,vpipes}`, `rifts`,
+   `advection_*`; validate against desktop OpenCL output (same
+   seeds/parameters). Ports land under `HighMap/wasm/` as additive files.
+3. **Harden & publish — partially done.** CI (GitHub Actions emscripten
+   build) and the Pages showcase shipped with
+   `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. Remaining:
+   benchmarks, the optional pthreads build, and publishing the npm
+   package.
 
 Risks:
 
