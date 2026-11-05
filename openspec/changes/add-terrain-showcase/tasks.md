@@ -17,10 +17,11 @@
 
 ## 3. Specimen diorama and viewport
 
-- [x] 3.1 Implement pure terrain helpers for display normalization, per-demo palettes, and the diorama geometry: indexed top grid, four boundary walls with hard edges, topsoil band, at least three rock strata, flat bottom cap, and a base below the minimum height; verify a geometry test checks wall coverage, closed shell, base depth, finite positions, and expected triangle counts.
+- [x] 3.1 Implement pure terrain helpers for display normalization, per-demo palettes, and the diorama geometry: indexed top grid, four boundary walls with hard edges, one solid cut-face color, flat bottom cap, and a base below the minimum height; verify a geometry test checks wall coverage, closed shell, base depth, finite positions, uniform side colors, and expected triangle counts.
 - [x] 3.2 Implement the three.js viewport with scene, camera framing, orbit limits, resize handling, warm key light, environment/hemisphere fill, shadow catcher, and ACES tone mapping; verify every catalog entry frames fully on load and the camera cannot go below the block.
 - [x] 3.3 Wire the detail page stats (grid shape, triangle count, generation time) and the wireframe/flat view toggles; verify each toggle changes the rendered material and the stats match the built geometry and measured generation time.
-- [x] 3.4 Tune palettes and relief for all nine specimens so the topsoil, strata, and solid base read clearly at gallery and detail sizes; verify a manual visual review of all nine confirms a closed block, visible cut faces, and legible terrain relief.
+- [x] 3.4 Tune palettes and relief for all nine specimens so the solid cut faces and base read clearly at gallery and detail sizes; verify a manual visual review of all nine confirms a closed block, visible cut faces, and legible terrain relief.
+- [x] 3.5 Replace the stepped side strata and topsoil band with one solid cut-face color, recapture all previews, and verify the geometry test asserts uniform side colors.
 
 ## 4. Gallery, previews, and provenance
 

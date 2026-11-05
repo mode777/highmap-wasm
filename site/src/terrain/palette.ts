@@ -6,11 +6,9 @@ export interface Palette {
   id: PaletteId;
   label: string;
   top: readonly { at: number; rgb: Rgb }[];
-  rock: readonly Rgb[];
   slope: Rgb;
-  topsoil: Rgb;
+  side: Rgb;
   bottom: Rgb;
-  topsoilThickness: number;
 }
 
 function srgbToLinear(channel: number): number {
@@ -38,20 +36,17 @@ function palette(
   id: PaletteId,
   label: string,
   top: readonly string[],
-  rock: readonly string[],
   slope: string,
-  topsoil: string,
+  side: string,
   bottom: string,
 ): Palette {
   return {
     id,
     label,
     top: ramp(top),
-    rock: ramp(rock).map((entry) => entry.rgb),
     slope: hexToLinear(slope),
-    topsoil: hexToLinear(topsoil),
+    side: hexToLinear(side),
     bottom: hexToLinear(bottom),
-    topsoilThickness: 0.03,
   };
 }
 
@@ -60,36 +55,32 @@ const PALETTES: Record<PaletteId, Palette> = {
     "temperate",
     "Temperate",
     ["#3f5a3a", "#5a6f45", "#728a52", "#8f9a68", "#a89a7c", "#bdb3a1", "#efebe4"],
-    ["#2b241e", "#6b4a32", "#a8754a", "#5a4636", "#c29a68"],
     "#7a7064",
-    "#3f2e21",
+    "#7a6048",
     "#241f1a",
   ),
   arid: palette(
     "arid",
     "Arid",
     ["#8f6b45", "#b98a55", "#d0a26b", "#dfbd8d", "#f0e0c4"],
-    ["#2f2118", "#7a4a2e", "#c08a52", "#8a5a3a", "#e0b478"],
     "#9a6b45",
-    "#4f3523",
+    "#9a6b45",
     "#2f2118",
   ),
   volcanic: palette(
     "volcanic",
     "Volcanic",
     ["#2f2b28", "#4a3e35", "#6b5543", "#8a6a4a", "#b89a6a"],
-    ["#151311", "#4a3a2e", "#7a5a40", "#3a3028", "#9a6a45"],
     "#4a403a",
-    "#241d18",
+    "#3f3832",
     "#151311",
   ),
   arctic: palette(
     "arctic",
     "Arctic",
     ["#4a5f6a", "#6f8288", "#9aa8ab", "#c8d0d0", "#f4f6f5"],
-    ["#202629", "#4e585c", "#8b969a", "#5a666a", "#c0cacc"],
     "#6f7a7e",
-    "#384246",
+    "#5a666a",
     "#202629",
   ),
 };
@@ -146,28 +137,6 @@ export function topColor(
   const base = sampleRamp(config.top, height);
   const rockMix = smoothstep(1.4, 3.8, slope) * 0.55;
   return mix(base, config.slope, rockMix);
-}
-
-/** Cut-face color: topsoil near the surface, stepped rock bands below. */
-export function strataColor(
-  config: Palette,
-  absoluteY: number,
-  baseY: number,
-  topY: number,
-  depthBelowTop: number,
-): Rgb {
-  if (depthBelowTop <= config.topsoilThickness) {
-    return [...config.topsoil];
-  }
-
-  const t = clamp01((absoluteY - baseY) / Math.max(1e-6, topY - baseY));
-  const bands = config.rock.length;
-  const stepped = bands <= 1 ? 0.5 : Math.round(t * (bands - 1)) / (bands - 1);
-  const index = Math.min(
-    config.rock.length - 1,
-    Math.max(0, Math.round(stepped * (config.rock.length - 1))),
-  );
-  return [...config.rock[index]!];
 }
 
 export function bottomColor(config: Palette): Rgb {

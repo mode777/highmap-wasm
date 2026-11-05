@@ -37,7 +37,7 @@ describe("showcase previews", () => {
   });
 
   it("records the expected capture contract", () => {
-    expect(manifest.previewVersion).toBe(2);
+    expect(manifest.previewVersion).toBe(3);
     expect(manifest.viewport).toEqual({
       width: 640,
       height: 400,

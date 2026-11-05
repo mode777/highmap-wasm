@@ -2,7 +2,6 @@ import type { Heightmap } from "../demos/types.js";
 import {
   bottomColor,
   getPalette,
-  strataColor,
   topColor,
   type PaletteId,
 } from "./palette.js";
@@ -174,22 +173,8 @@ export function buildDiorama(
       const t = row / SHELL_ROWS;
       const yLeft = yA + (baseY - yA) * t;
       const yRight = yB + (baseY - yB) * t;
-      const leftColor = strataColor(
-        palette,
-        yLeft,
-        baseY,
-        topMax,
-        yA - yLeft,
-      );
-      const rightColor = strataColor(
-        palette,
-        yRight,
-        baseY,
-        topMax,
-        yB - yRight,
-      );
-      pushVertex(xA, yLeft, zA, leftColor);
-      pushVertex(xB, yRight, zB, rightColor);
+      pushVertex(xA, yLeft, zA, palette.side);
+      pushVertex(xB, yRight, zB, palette.side);
     }
 
     for (let row = 0; row < SHELL_ROWS; row += 1) {

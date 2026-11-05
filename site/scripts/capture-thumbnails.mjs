@@ -11,7 +11,7 @@ const SITE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMO_DIR = join(SITE_ROOT, "src", "demos");
 const OUT_DIR = join(SITE_ROOT, "src", "assets", "previews");
 const VITE_BIN = join(SITE_ROOT, "node_modules", "vite", "bin", "vite.js");
-const PREVIEW_VERSION = 2;
+const PREVIEW_VERSION = 3;
 const VIEWPORT = { width: 640, height: 400, deviceScaleFactor: 2 };
 const QUALITY = 82;
 

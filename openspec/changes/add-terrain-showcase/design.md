@@ -150,18 +150,16 @@ The block:
   normalized elevation and local slope.
 - **Shell**: four boundary walls, each a quad strip from the top boundary down
   to a flat base plane. Vertices are duplicated per wall so the cut faces stay
-  hard-edged. The walls are vertically subdivided at the strata boundaries.
+  hard-edged. The walls are vertically subdivided for smooth shading.
 - **Bottom**: a two-triangle cap at the base plane, dark.
 - **Base depth**: 0.22 of the tile width below the lowest top vertex, so the
-  block has visible mass. Stratum bands are absolute Y ranges; a thin topsoil
-  band follows the top boundary just below the surface.
-- **Strata**: at least four bands per side (topsoil, two or three rock layers,
-  dark base rock). A deterministic per-vertex color jitter keeps the bands from
-  looking like flat paint without requiring textures.
+  block has visible mass.
+- **Side color**: one solid cut-face color per palette; no topsoil or rock
+  bands.
 
 Top and shell are separate meshes/materials: the top uses smooth normals and a
-terrain palette; the shell uses flat shading and a geological palette derived
-from the same family. The viewport groups them, frames the union's bounding
+terrain palette; the shell uses flat shading and a single cut-face color derived
+from the same palette. The viewport groups them, frames the union's bounding
 sphere with a margin, and limits the orbit polar angle so the camera cannot go
 below the block. A shadow catcher plane sits at the bottom, with the directional
 key light casting a soft shadow.
@@ -170,11 +168,12 @@ Why a solid block instead of a displaced plane: the finite heightmap tile needs
 an intentional edge; a cut block reads as a specimen and matches the libfive
 gallery language. Why not marching cubes or an adaptive surface: the source is
 already a regular grid, and a grid top preserves the exact heightmap data and
-the crisp strata.
+the crisp cut edge.
 
 Palettes are code constants, no image assets: `temperate`, `arid`, `volcanic`,
-`arctic`. Each has elevation stops, slope-rock blending, and matching strata
-colors. Palette/relief tuning is art direction and does not change the spec.
+`arctic`. Each has elevation stops, slope-rock blending, and a matching solid
+cut-face color. Palette/relief tuning is art direction and does not change the
+spec.
 
 ### 5. Detail page and code view
 

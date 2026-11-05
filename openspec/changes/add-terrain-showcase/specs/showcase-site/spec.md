@@ -67,16 +67,15 @@ explicitly recorded because the source example targets a larger grid.
 ### Requirement: Solid specimen diorama
 
 Each terrain SHALL render as a closed specimen block: a heightmap top surface,
-vertical cut faces that follow the terrain boundary, a distinct topsoil layer
-below the top edge, horizontal rock strata, and a flat bottom. The base MUST
-sit below the lowest terrain point and the block MUST have visible thickness
-rather than appearing as a thin plane.
+vertical cut faces that follow the terrain boundary, a single solid cut-face
+color, and a flat bottom. The base MUST sit below the lowest terrain point and
+the block MUST have visible thickness rather than appearing as a thin plane.
 
 #### Scenario: Diorama reads as a cut block
 
 - **WHEN** any catalog terrain is displayed
-- **THEN** its sides are visible below the terrain surface, showing topsoil
-  and at least three rock strata, and the underside is closed
+- **THEN** its sides are visible below the terrain surface in one uniform
+  cut-face color, and the underside is closed
 
 #### Scenario: Base stays below the terrain
 

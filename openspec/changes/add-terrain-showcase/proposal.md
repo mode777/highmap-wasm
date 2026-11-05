@@ -22,9 +22,9 @@ produced each result.
   `ex_falloff` (Euclidian), `ex_plateau`, `ex_smooth_fill`, and the first
   `hydraulic_stream` panel of `ex_hydraulic_stream`.
 - Render each terrain as a **specimen diorama**: a square block with a
-  heightmap top, vertical cut faces that follow the terrain boundary, a thin
-  topsoil band, horizontal rock strata, and a flat bottom. The base is a
-  first-class part of the presentation, not a thin plane.
+  heightmap top, vertical cut faces that follow the terrain boundary, a single
+  solid cut-face color, and a flat bottom. The base is a first-class part of
+  the presentation, not a thin plane.
 - Add a detail page with an orbitable three.js viewport, mesh statistics,
   wireframe/flat view toggles, and a code tab showing the exact TypeScript
   recipe, the source C++ example, and the panel or variant it ports.

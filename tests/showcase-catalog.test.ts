@@ -131,6 +131,14 @@ describe("showcase diorama geometry", () => {
         expect(Number.isFinite(value)).toBe(true);
       }
 
+      const side = getPalette(demo.meta.palette).side;
+      const sideVertexCount = geometry.shell.positions.length / 3 - 4;
+      for (let vertex = 0; vertex < sideVertexCount; vertex += 1) {
+        expect(geometry.shell.colors[vertex * 3]).toBeCloseTo(side[0], 6);
+        expect(geometry.shell.colors[vertex * 3 + 1]).toBeCloseTo(side[1], 6);
+        expect(geometry.shell.colors[vertex * 3 + 2]).toBeCloseTo(side[2], 6);
+      }
+
       let topMin = Infinity;
       let topMax = -Infinity;
       for (let index = 1; index < geometry.top.positions.length; index += 3) {
