@@ -86,9 +86,18 @@ void hydraulic_musgrave(Array &z,
             }
 
             // sediment transport with water
-            float ds_transport = s(i, j) * dw / w(i, j);
-            s(i, j) -= ds_transport;
-            s(p, q) += ds_transport;
+            // [highmap-wasm fork] Guard against w == 0: dw <= w is enforced
+            // by the min() above, so w can hit exact zero here, and the
+            // original s * dw / w becomes 0/0 = NaN. With no water left,
+            // no sediment is transported (the zero-flux limit). Flagged as
+            // the fork's only upstream edit; see AD-014 in
+            // docs/decisions.md. Identical code runs in the desktop build.
+            if (w(i, j) > 0.f)
+            {
+              float ds_transport = s(i, j) * dw / w(i, j);
+              s(i, j) -= ds_transport;
+              s(p, q) += ds_transport;
+            }
           }
         }
 

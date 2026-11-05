@@ -1,0 +1,145 @@
+﻿/**
+ * Typed view over the embind module produced by the Emscripten factory
+ * (dist/highmap.js). Only the symbols used by the JS layer are declared;
+ * the binding manifest (HighMap/wasm/manifest.md) is the source of truth
+ * for what exists on the module.
+ */
+
+/** Raw embind handle for an `hmap::Array`; `.delete()` releases it. */
+export interface RawArray {
+  ni(): number;
+  nj(): number;
+  dataPtr(): number;
+  delete(): void;
+}
+
+export enum NoiseType {
+  PARBERRY = "PARBERRY",
+  PERLIN = "PERLIN",
+  PERLIN_BILLOW = "PERLIN_BILLOW",
+  PERLIN_HALF = "PERLIN_HALF",
+  SIMPLEX2 = "SIMPLEX2",
+  SIMPLEX2S = "SIMPLEX2S",
+  VALUE = "VALUE",
+  VALUE_CUBIC = "VALUE_CUBIC",
+  WORLEY = "WORLEY",
+  WORLEY_DOUBLE = "WORLEY_DOUBLE",
+  WORLEY_VALUE = "WORLEY_VALUE",
+}
+
+export enum DistanceFunction {
+  CHEBYSHEV = "CHEBYSHEV",
+  EUCLIDIAN = "EUCLIDIAN",
+  EUCLISHEV = "EUCLISHEV",
+  MANHATTAN = "MANHATTAN",
+}
+
+export interface HighmapModule {
+  /** The module's wasm memory; views derive from `wasmMemory.buffer`. */
+  readonly wasmMemory: WebAssembly.Memory;
+
+  // enums (embind enum members carry their numeric value on `.value`)
+  readonly NoiseType: Record<NoiseType, { value: number }>;
+  readonly DistanceFunction: Record<DistanceFunction, { value: number }>;
+
+  // classes
+  makeArray(ni: number, nj: number, value: number): RawArray;
+
+  // noise family
+  noise(
+    noiseType: { value: number },
+    ni: number,
+    nj: number,
+    kx: number,
+    ky: number,
+    seed: number,
+  ): RawArray;
+  noiseFbm(
+    noiseType: { value: number },
+    ni: number,
+    nj: number,
+    kx: number,
+    ky: number,
+    seed: number,
+    octaves: number,
+    weight: number,
+    persistence: number,
+    lacunarity: number,
+  ): RawArray;
+  noisePingpong(
+    noiseType: { value: number },
+    ni: number,
+    nj: number,
+    kx: number,
+    ky: number,
+    seed: number,
+    octaves: number,
+    weight: number,
+    persistence: number,
+    lacunarity: number,
+  ): RawArray;
+  noiseRidged(
+    noiseType: { value: number },
+    ni: number,
+    nj: number,
+    kx: number,
+    ky: number,
+    seed: number,
+    octaves: number,
+    weight: number,
+    persistence: number,
+    lacunarity: number,
+    kSmoothing: number,
+  ): RawArray;
+
+  // value range / filters (in place)
+  clampValues(raw: RawArray, vmin: number, vmax: number): void;
+  remapValues(raw: RawArray, vmin: number, vmax: number): void;
+  falloff(raw: RawArray, strength: number, distFct: { value: number }): void;
+  plateau(raw: RawArray, ir: number, factor: number): void;
+  smoothFill(raw: RawArray, ir: number, k: number): void;
+
+  // shading (new array)
+  hillshade(
+    raw: RawArray,
+    azimuth: number,
+    zenith: number,
+    talusRef: number,
+  ): RawArray;
+
+  // transforms (in place)
+  warp(raw: RawArray, dx: RawArray, dy: RawArray): void;
+
+  // algebra (new arrays)
+  add(a: RawArray, b: RawArray): RawArray;
+  subtract(a: RawArray, b: RawArray): RawArray;
+  multiply(a: RawArray, b: RawArray): RawArray;
+  divide(a: RawArray, b: RawArray): RawArray;
+  addScalar(a: RawArray, v: number): RawArray;
+  subtractScalar(a: RawArray, v: number): RawArray;
+  multiplyScalar(a: RawArray, v: number): RawArray;
+  divideScalar(a: RawArray, v: number): RawArray;
+  scale(raw: RawArray, factor: number): void;
+
+  // erosion (in place)
+  hydraulicMusgrave(
+    z: RawArray,
+    iterations: number,
+    cCapacity: number,
+    cErosion: number,
+    cDeposition: number,
+    waterLevel: number,
+    evapRate: number,
+  ): void;
+  hydraulicStream(
+    z: RawArray,
+    cErosion: number,
+    talusRef: number,
+    ir: number,
+    clippingRatio: number,
+  ): void;
+}
+
+export type HighmapFactory = (
+  overrides?: Record<string, unknown>,
+) => Promise<HighmapModule>;

@@ -1,4 +1,11 @@
+# build
 build/
 build_clang/
+build_wasm/
 .cache
 .vscode
+
+# js tooling
+node_modules/
+dist/
+*.tsbuildinfo
