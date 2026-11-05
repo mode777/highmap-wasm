@@ -1,0 +1,66 @@
+name: build-wasm
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test the wasm artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cache Emscripten
+        uses: actions/cache@v4
+        with:
+          path: ~/emsdk
+          key: emsdk-6.0.13-${{ runner.os }}
+
+      - name: Install Emscripten 6.0.13
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d "$HOME/emsdk" ]; then
+            git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          fi
+          cd "$HOME/emsdk"
+          ./emsdk install 6.0.13
+          ./emsdk activate 6.0.13
+          echo "EMSDK=$HOME/emsdk" >> "$GITHUB_ENV"
+
+      - name: Install package dependencies
+        run: npm ci
+
+      - name: Build the wasm and JS artifacts
+        run: |
+          scripts/build-wasm.sh
+          node scripts/build-js.mjs
+
+      - name: Run the package tests
+        run: npm test
+
+      - name: Upload the tested artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: highmap-wasm
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

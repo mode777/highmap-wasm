@@ -1,0 +1,26 @@
+{
+  "name": "highmap-wasm-showcase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Public terrain showcase for highmap-wasm (not part of the npm package).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit",
+    "thumbnails:capture": "node scripts/capture-thumbnails.mjs"
+  },
+  "dependencies": {
+    "highmap-wasm": "file:..",
+    "highlight.js": "^11.11.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/three": "^0.187.0",
+    "puppeteer-core": "^25.16.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7"
+  }
+}

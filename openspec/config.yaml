@@ -18,9 +18,15 @@ context: |
 # Per-operation guidance (optional)
 # Advisory guidance for how apply and archive work should be conducted.
 operations:
+  apply:
+    guidance:
+      - After apply is done, always commit the implemented work and push it to
+        main. Verify the git identity is mode777 before committing.
+      - Include the change artifacts, tests, documentation, and configuration
+        updates in the commit; do not leave applied work uncommitted.
   archive:
     guidance:
-      - Always commit the work after a successful archive. Stage the archived
-        change, the synced main specs, and the implemented changes together and
-        create one reviewable commit before starting the next change. Verify the
-        git identity is mode777 before committing.
+      - Always commit the work after a successful archive and push it to main.
+        Stage the archived change, the synced main specs, and the implemented
+        changes together and create one reviewable commit before starting the
+        next change. Verify the git identity is mode777 before committing.

@@ -1,0 +1,66 @@
+{
+  "previewVersion": 2,
+  "capturedAt": "2026-11-05T15:15:26.998Z",
+  "viewport": {
+    "width": 640,
+    "height": 400,
+    "deviceScaleFactor": 2
+  },
+  "quality": 82,
+  "demos": {
+    "falloff": {
+      "file": "falloff.webp",
+      "sourceHash": "a3a688c7ce58d1f5c982ad7c60e5f1e5a49169dc9eae6398bfc2465f162f2b13",
+      "width": 1280,
+      "height": 800
+    },
+    "fractal-noise": {
+      "file": "fractal-noise.webp",
+      "sourceHash": "ca83f1260165b47bd6d33770a48db06b0c890941e953a79b03e11f993e0fa4db",
+      "width": 1280,
+      "height": 800
+    },
+    "pingpong-noise": {
+      "file": "pingpong-noise.webp",
+      "sourceHash": "1d631dce7b2c9cd820674d20c0c57f0768779e789fa5ba42a68e2ddd78bd66a6",
+      "width": 1280,
+      "height": 800
+    },
+    "plateau": {
+      "file": "plateau.webp",
+      "sourceHash": "ccabfad6a619a83d31ba42d7d71ba4f08f135bcfaca344aef249a590abfbc3c9",
+      "width": 1280,
+      "height": 800
+    },
+    "ridged-noise": {
+      "file": "ridged-noise.webp",
+      "sourceHash": "f181f52ec9b85de9bb183e32139939d1e2a769ddcb60a530de65e01446dafc2f",
+      "width": 1280,
+      "height": 800
+    },
+    "smooth-fill": {
+      "file": "smooth-fill.webp",
+      "sourceHash": "4b47783b573094a97371cdba82aab7753b1a15853820c17e8328470ebcb3d88f",
+      "width": 1280,
+      "height": 800
+    },
+    "stream-erosion": {
+      "file": "stream-erosion.webp",
+      "sourceHash": "271c533186f8a9d3f6b67470f050a947e58ed026da893c078c599bc5e4f81952",
+      "width": 1280,
+      "height": 800
+    },
+    "warp": {
+      "file": "warp.webp",
+      "sourceHash": "ad59da32faf44a37e88cac8453f736c33443f54224ce59b7d96a876c8f97cc61",
+      "width": 1280,
+      "height": 800
+    },
+    "worley-noise": {
+      "file": "worley-noise.webp",
+      "sourceHash": "781ca8ed7791e680972c1949f8bd3fa547bfe3da6e2e9f4a6a641d55d804dc96",
+      "width": 1280,
+      "height": 800
+    }
+  }
+}

@@ -1,0 +1,76 @@
+name: pages
+
+# Deploy the showcase from the exact wasm artifact the main-branch build
+# validated. The site is not part of the npm package.
+on:
+  workflow_run:
+    workflows: [build-wasm]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy the showcase
+    if: >
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download the tested wasm artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: highmap-wasm
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install showcase dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Typecheck and build the showcase
+        working-directory: site
+        env:
+          SITE_BASE: /highmap-wasm/
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          npm run check
+          npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
