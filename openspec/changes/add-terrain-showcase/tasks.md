@@ -37,12 +37,12 @@
 - [x] 5.4 Add footer links to the existing GitHub docs, the LGPL-2.1 notice, and the exact source/build instructions, injecting the build commit SHA when available; verify the built site contains all links and the license text.
 - [x] 5.5 Document the Pages source switch to GitHub Actions, the first-deploy verification, and the rollback path in `site/README.md`; verify the instructions match the workflows and repository settings.
 - [x] 5.6 Add a package-boundary test asserting `npm pack --dry-run --json` contains no `site/` path; verify the test passes and the tarball still contains `dist`, README, LICENSE, and `THIRD_PARTY_LICENSES.md`.
-- [ ] 5.7 Switch the repository Pages source to GitHub Actions and trigger the first deployment; verify `https://mode777.github.io/highmap-wasm/` serves the gallery and a detail page loads the wasm and renders its specimen.
+- [x] 5.7 Switch the repository Pages source to GitHub Actions and trigger the first deployment; verify `https://mode777.github.io/highmap-wasm/` serves the gallery and a detail page loads the wasm and renders its specimen.
 
 ## 6. Integration verification
 
 - [x] 6.1 Run the full local gate: root `npm test`, root `npm run check`, `site/npm run check`, `site` build with `SITE_BASE=/highmap-wasm/`, and the package-boundary test; verify all pass from the tested `dist/` artifact.
-- [ ] 6.2 Verify the deployed site covers all nine detail routes, each preview is present and current, the code tab matches each recipe, and docs/license links resolve.
+- [x] 6.2 Verify the deployed site covers all nine detail routes, each preview is present and current, the code tab matches each recipe, and docs/license links resolve.
 - [x] 6.3 Inspect the final diff for scope: no upstream C++ source edits, no new package exports, no site files in the npm tarball, and no secrets or generated build output committed; verify with `git diff --stat`, `git status`, and `npm pack --dry-run`.
 
 ## Workflow follow-up

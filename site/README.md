@@ -152,9 +152,9 @@ and pull requests. `.github/workflows/pages.yml` runs after a successful
 `build-wasm` on `main`, downloads that run's `dist/` artifact, builds the site
 with `SITE_BASE=/highmap-wasm/`, and deploys `site/dist` to GitHub Pages.
 
-One repository setting is required: **Settings → Pages → Build and deployment
-→ Source** must be **GitHub Actions**, not the legacy `gh-pages` branch. The
-old `deploy_docs.yml` workflow was retired with this change.
+The repository Pages source is **GitHub Actions** (**Settings → Pages → Build
+and deployment → Source**), not the legacy `gh-pages` branch. The old
+`deploy_docs.yml` workflow was retired with this change.
 
 First deploy verification:
 
