@@ -174,15 +174,19 @@ void print_csv_header_once()
 // --- reporting / assertions -----------------------------------------------
 
 // Continuous variants: the kernel arithmetic is branch-continuous, so only
-// float rounding separates the two implementations.
-constexpr float CONTINUOUS_MAX_RATIO = 1e-4f;
-constexpr float CONTINUOUS_RMS_RATIO = 1e-5f;
+// float rounding separates the two implementations. Calibrated 2026-11-06
+// against PoCL: worst measured error 4.2e-7 (max) / 1.1e-7 (rms) of range, so
+// these bounds keep ~25x / ~20x headroom while still catching a wrong
+// coefficient or branch.
+constexpr float CONTINUOUS_MAX_RATIO = 1e-5f;
+constexpr float CONTINUOUS_RMS_RATIO = 2e-6f;
 
 // Selection-based variants (argmin/argmax flips on near-ties) get a wider
-// single-cell bound but a mean-error bound. Provisional: tightened in
-// docs/thermal-parity.md from the first oracle run.
-constexpr float SELECTION_MAX_RATIO = 5e-2f;
-constexpr float SELECTION_RMS_RATIO = 1e-3f;
+// single-cell bound but a mean-error bound. Calibrated 2026-11-06: the worst
+// case is thermal_flatten at 4.7e-3 (max) / 3.9e-5 (rms) of range (an argmax
+// flip); olsen is bit-exact and rib stays at 1.1e-6.
+constexpr float SELECTION_MAX_RATIO = 2e-2f;
+constexpr float SELECTION_RMS_RATIO = 2e-4f;
 
 void expect_parity(const char *variant,
                    const char *scene,
