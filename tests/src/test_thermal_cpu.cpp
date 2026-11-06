@@ -349,7 +349,11 @@ class ThermalParity : public ::testing::Test
 protected:
   void SetUp() override
   {
-    if (!gpu::init_opencl())
+    // Build the OpenCL kernels once for the whole suite; PoCL compilation is
+    // the expensive part of every gpu:: call.
+    static const bool opencl_ready = gpu::init_opencl();
+
+    if (!opencl_ready)
       GTEST_SKIP() << "no OpenCL platform/device available - parity cannot be "
                       "verified on this machine";
   }
