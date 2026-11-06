@@ -403,7 +403,7 @@ inline void mcdonald_solve_sample(Array                &bed,
     const float deposit = p.time_step * p.deposition_rate * sedm;
 
     float       transfer = deposit + suspend;
-    const float maxtransfer = 0.2f * slope * cl_len / z_m * Z * Q;
+    const float maxtransfer = 0.1f * slope * cl_len / z_m * Z * Q;
     const float tmin = transfer *
                        std::fmin(1.f, std::fabs(maxtransfer / suspend));
     const float tmax = sedm;
@@ -806,8 +806,8 @@ inline void vpipes_erosion_pass(const Array &z,
       const float depth = std::fmin(d2(i, j) / dmax,
                                     downcutting_max_depth_ratio);
       const float discharge = depth * speed;
-      const float capa = 1.1f * k_capacity *
-                         std::pow(discharge, k_discharge_exp) * salpha;
+      const float capa = k_capacity * std::pow(discharge, k_discharge_exp) *
+                         salpha;
 
       const float st = s(i, j);
       const float zt = z(i, j);
@@ -1038,7 +1038,7 @@ void hydraulic_schott(Array       &z,
           // --- hydraulic erosion
           const float flow_val = sample_clamp(flow, i, j);
           const float spe = c_erosion *
-                            std::fmin(2.f,
+                            std::fmin(3.f,
                                       pow_float(flow_val, flow_acc_exponent) *
                                           speed);
           const float z_steepest = sample_clamp(z, qx, qy);
@@ -1193,7 +1193,7 @@ void hydraulic_schott_erosion(Array       &z,
                                       1.f);
         const float z_val = z(i, j);
         const float spe = c_erosion *
-                          std::fmin(2.f,
+                          std::fmin(3.f,
                                     pow_float(flow(i, j), flow_acc_exponent) *
                                         speed);
         const float z_steepest = sample_clamp(z, qx, qy);
