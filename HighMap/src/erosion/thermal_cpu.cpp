@@ -79,7 +79,7 @@ inline float helper_thermal_exchange(float self,
                                      float talus)
 {
   const float max_dif = dist * talus;
-  const float rate = 0.25f;
+  const float rate = 0.2f;
 
   if (self > other)
   {
@@ -620,7 +620,7 @@ void thermal_olsen(Array &z, const Array &talus, int iterations)
           for (int p = 0; p < 8; p++)
             if (dz[p] > talus_val * CD[p])
             {
-              const float amount = 0.30f * (dmax - talus_val * CD[p]) *
+              const float amount = 0.25f * (dmax - talus_val * CD[p]) *
                                    dz[p] / dsum;
               delta -= amount;
             }
@@ -663,7 +663,7 @@ void thermal_olsen(Array &z, const Array &talus, int iterations)
 
             if (diff_to_c > talus_k * CD[rev_p])
             {
-              const float amount = 0.30f * (dmax_k - talus_k * CD[rev_p]) *
+              const float amount = 0.25f * (dmax_k - talus_k * CD[rev_p]) *
                                    diff_to_c / dsum_k;
               delta += amount;
             }

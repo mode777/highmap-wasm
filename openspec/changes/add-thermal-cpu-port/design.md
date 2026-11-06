@@ -202,6 +202,16 @@ When no OpenCL device is present the test calls `GTEST_SKIP()` with the reason;
 the CI job treats a skip as a failure, so a device-less runner cannot produce a
 hollow pass.
 
+Two oracle limitations were confirmed by the first runs and are handled without
+touching upstream sources (see `docs/thermal-parity.md` and AD-018/AD-021):
+
+- `thermal_conserve` is the only image2d-based variant (`CL_R`/`CL_FLOAT`); the
+  CI PoCL device rejects that format, so the case probes with a 1x1 image and
+  skips with a message the CI guard explicitly allows. All other skips fail.
+- `thermal_rib`'s GPU launch discards the result for even iteration counts
+  (upstream read-back bug), so the harness compares at 1 and 9 iterations; the
+  kernel itself is exercised identically.
+
 ### D6: Additive parity CI workflow
 
 `.github/workflows/thermal-parity.yml` (new file, no edits to `cmake.yml`):

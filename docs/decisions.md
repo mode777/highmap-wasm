@@ -123,3 +123,39 @@ marks the old one superseded — entries are never edited in place.
   duplicate-symbol link error or a duplicate-default-argument compile error and
   delete the port file plus the header; bindings and tests speak only the
   `hmap::` names, so no call site changes.
+- **AD-018 - Thermal GPU/CPU parity oracle lives in CI.** (2026-11-06) The
+  `thermal-parity` workflow builds the desktop library with PoCL and compares
+  `hmap::gpu::thermal*` against the CPU ports on fixed scenes
+  (`tests/src/test_thermal_cpu.cpp`); calibrated bounds, measured agreement and
+  the mutation check are recorded in `docs/thermal-parity.md`. A skipped case
+  fails the job, with one exception: `thermal_conserve` is image2d-based
+  (`CL_R`/`CL_FLOAT`), which the CI PoCL device rejects, so that case skips
+  with an explicit "no float image support" message and needs a device with
+  image support to be closed. Rationale: AGENTS.md requires numerical
+  validation against the desktop OpenCL build before claiming parity, and the
+  development machine has no OpenCL ICD.
+- **AD-019 - Thermal JS surface defers masks and deposition maps.**
+  (2026-11-06) The CPU ports implement the full `hmap::gpu::*` overload set
+  (mask, bedrock, deposition), but the bindings expose only the plain in-place
+  form: `thermal`, `thermalAutoBedrock`, `thermalConserve`, `thermalFlatten`,
+  `thermalInflate`, `thermalOlsen`, `thermalRib`, `thermalRidge`,
+  `thermalScree`, `thermalSchott`. Rationale: the JS surface has no mask or
+  output-grid concept yet and a single-family precedent would predate the
+  whole-pipeline design. The deferral is recorded in
+  `HighMap/wasm/manifest.md`; adding the arguments later is backward
+  compatible.
+- **AD-020 - Thermal option defaults.** (2026-11-06) JS defaults are
+  `iterations` 10 for every thermal function (including `thermalRib`,
+  `thermalFlatten` and `thermalOlsen`, whose C++ overloads declare no default),
+  `rate` 0.5, `sigmaInf` 0.5, `sigmaSup` 0 and `intensity` 0.2. `talus` and
+  `zmax` are required positional arguments - no scale-dependent default is
+  invented - and a numeric value becomes a constant wasm grid that the API
+  layer frees after the call.
+- **AD-021 - `thermal_rib` GPU read-back bug recorded, not fixed.**
+  (2026-11-06) `gpu::thermal_rib` reads the wrong buffer back for even
+  iteration counts (`run_ba.read_buffer("z_in")` downloads the stale input
+  buffer in `src/erosion/thermal_gpu.cpp`), so `gpu::thermal_rib(z, 10)`
+  returns the padded input instead of the eroded grid. The fork does not edit
+  that file (AD-017); the CPU port is correct, and the parity harness compares
+  at odd iteration counts, which exercise the same kernel. Recorded as a
+  candidate upstream issue in `docs/thermal-parity.md`.
