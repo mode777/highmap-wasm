@@ -15,6 +15,10 @@ export type {
   HillshadeOptions,
   HydraulicMusgraveOptions,
   HydraulicStreamOptions,
+  ThermalConserveOptions,
+  ThermalFlattenOptions,
+  ThermalOptions,
+  ThermalSchottOptions,
 } from "./api/highmap.ts";
 export type { InitOptions } from "./loader/init.ts";
 export { DistanceFunction, NoiseType } from "./loader/module.ts";

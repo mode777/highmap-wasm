@@ -46,6 +46,42 @@ takes explicit arguments.
 | `hydraulicMusgrave` | `hmap::hydraulic_musgrave` | `(z&, iterations, cCapacity, cErosion, cDeposition, waterLevel, evapRate)` | `iterations: 100, cCapacity: 1, cErosion: 0.1, cDeposition: 0.1, waterLevel: 0.01, evapRate: 0.01` |
 | `hydraulicStream` | `hmap::hydraulic_stream` | `(z&, cErosion, talusRef, ir, clippingRatio)` | `ir: 1, clippingRatio: 10` |
 
+### Thermal family (CPU ports)
+
+The thermal variants were GPU-only upstream; `HighMap/src/erosion/thermal_cpu.cpp`
+transcribes their OpenCL kernels into CPU code (see `docs/decisions.md`
+AD-017) and `thermal_schott` reuses the upstream CPU implementation.
+
+`talus` (and `zmax` for `thermalScree`) accepts a **number** (uniform limit) or
+a **grid** (per-cell limit); the TS layer materializes a constant wasm grid for
+numbers. Defaults are the C++ header defaults where declared; `thermalRib`,
+`thermalFlatten` and `thermalOlsen` declare no `iterations` default in C++, so
+the TS layer uses 10 for consistency.
+
+| JS name (binding) | C++ call | Binding signature | JS options (defaults) |
+|---|---|---|---|
+| `thermal` | `hmap::thermal` | `(z&, talus&, iterations)` | `iterations: 10` |
+| `thermalAutoBedrock` | `hmap::thermal_auto_bedrock` | `(z&, talus&, iterations)` | `iterations: 10` |
+| `thermalConserve` | `hmap::thermal_conserve` | `(z&, talus&, iterations, rate)` | `iterations: 10, rate: 0.5` |
+| `thermalFlatten` | `hmap::thermal_flatten` | `(z&, talus&, iterations, sigmaInf, sigmaSup)` | `iterations: 10, sigmaInf: 0.5, sigmaSup: 0` |
+| `thermalOlsen` | `hmap::thermal_olsen` | `(z&, talus&, iterations)` | `iterations: 10` |
+| `thermalRib` | `hmap::thermal_rib` | `(z&, iterations)` | `iterations: 10` |
+| `thermalInflate` | `hmap::thermal_inflate` | `(z&, talus&, iterations)` | `iterations: 10` |
+| `thermalRidge` | `hmap::thermal_ridge` | `(z&, talus&, iterations)` | `iterations: 10` |
+| `thermalScree` | `hmap::thermal_scree` | `(z&, talus&, zmax&, iterations)` | `iterations: 10` |
+| `thermalSchott` | `hmap::thermal_schott` | `(z&, talus&, iterations, intensity)` | `iterations: 10, intensity: 0.2` |
+
+`thermalSchott` is not a port: it calls the upstream CPU implementation
+(`src/erosion/thermal_schott.cpp`), which extrapolates the borders after
+**every** iteration - unlike the GPU wrapper, which extrapolates once after the
+loop. It is bound as-is and excluded from the parity bounds; see
+`docs/thermal-parity.md`.
+
+Deferred: the mask and deposition-map overloads of the thermal family (the
+`const Array *p_mask` and `Array *p_deposition_map` parameters) are implemented
+in C++ but not bound — the JS surface has no mask or output-grid concept yet.
+Add them as optional arguments when that concept lands.
+
 Deferred: the moisture-aware `hydraulic_musgrave` overload (C++ takes an
 extra moisture map). It NaNs on non-constant moisture maps in the pinned
 upstream tree — the sediment transport step divides by the local water level,

@@ -56,6 +56,22 @@ const scenes = {
     m.hydraulicStream(t, 0.1, 0.01, 1, 10);
     return t;
   },
+  "thermal-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    const talus = m.makeArray(64, 64, 0.1 / 64);
+    m.thermal(t, talus, 10);
+    talus.delete();
+    return t;
+  },
+  "thermal-conserve-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    const talus = m.makeArray(64, 64, 0.1 / 64);
+    m.thermalConserve(t, talus, 10, 0.5);
+    talus.delete();
+    return t;
+  },
 };
 
 const out = {};

@@ -138,6 +138,39 @@ export interface HighmapModule {
     ir: number,
     clippingRatio: number,
   ): void;
+
+  // thermal family (CPU ports; in place)
+  thermal(z: RawArray, talus: RawArray, iterations: number): void;
+  thermalAutoBedrock(z: RawArray, talus: RawArray, iterations: number): void;
+  thermalConserve(
+    z: RawArray,
+    talus: RawArray,
+    iterations: number,
+    rate: number,
+  ): void;
+  thermalFlatten(
+    z: RawArray,
+    talus: RawArray,
+    iterations: number,
+    sigmaInf: number,
+    sigmaSup: number,
+  ): void;
+  thermalOlsen(z: RawArray, talus: RawArray, iterations: number): void;
+  thermalRib(z: RawArray, iterations: number): void;
+  thermalInflate(z: RawArray, talus: RawArray, iterations: number): void;
+  thermalRidge(z: RawArray, talus: RawArray, iterations: number): void;
+  thermalScree(
+    z: RawArray,
+    talus: RawArray,
+    zmax: RawArray,
+    iterations: number,
+  ): void;
+  thermalSchott(
+    z: RawArray,
+    talus: RawArray,
+    iterations: number,
+    intensity: number,
+  ): void;
 }
 
 export type HighmapFactory = (

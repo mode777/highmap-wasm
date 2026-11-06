@@ -76,6 +76,27 @@ export interface HydraulicStreamOptions {
   clippingRatio?: number;
 }
 
+/** Options shared by the thermal family (a trailing options object each). */
+export interface ThermalOptions {
+  iterations?: number;
+}
+
+/** `thermalConserve` adds the redistribution rate. */
+export interface ThermalConserveOptions extends ThermalOptions {
+  rate?: number;
+}
+
+/** `thermalFlatten` relaxes slopes below and above the talus threshold. */
+export interface ThermalFlattenOptions extends ThermalOptions {
+  sigmaInf?: number;
+  sigmaSup?: number;
+}
+
+/** `thermalSchott` adds the per-iteration intensity. */
+export interface ThermalSchottOptions extends ThermalOptions {
+  intensity?: number;
+}
+
 /**
  * The high-level API surface (grows per the binding manifest, AD-008).
  *
@@ -167,6 +188,65 @@ export interface Highmap {
     talusRef: number,
     options?: HydraulicStreamOptions,
   ): HArray;
+
+  // --- thermal family (in place; talus is uniform or per-cell) ------------------
+
+  thermal(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalAutoBedrock(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalConserve(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalConserveOptions,
+  ): HArray;
+
+  thermalFlatten(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalFlattenOptions,
+  ): HArray;
+
+  thermalOlsen(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalRib(grid: GridLike, options?: ThermalOptions): HArray;
+
+  thermalInflate(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalRidge(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalScree(
+    grid: GridLike,
+    talus: number | GridLike,
+    zmax: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+
+  thermalSchott(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalSchottOptions,
+  ): HArray;
 }
 
 const FRACTAL_DEFAULTS = {
@@ -193,6 +273,51 @@ export function createApi(mod: HighmapModule): Highmap {
   ): HArray => {
     const { raw, source } = coerceGrid(grid, argName, mod);
     run(raw);
+    return source ?? wrap(raw);
+  };
+
+  /**
+   * Run an in-place op that needs auxiliary grids (thermal talus / zmax).
+   * Numeric auxiliary values become constant grids sized like the target; those
+   * temporaries are freed after the call, and plain-object auxiliaries are
+   * copied in and freed too (design D4).
+   */
+  const inplaceWithAux = (
+    grid: GridLike,
+    aux: { value: number | GridLike; name: string }[],
+    run: (raw: RawArray, auxRaws: RawArray[]) => void,
+  ): HArray => {
+    const { raw, source } = coerceGrid(grid, "grid", mod);
+    const owned: RawArray[] = [];
+    const auxRaws: RawArray[] = [];
+
+    try {
+      for (const { value, name } of aux) {
+        if (typeof value === "number") {
+          const temp = mod.makeArray(raw.ni(), raw.nj(), value);
+          owned.push(temp);
+          auxRaws.push(temp);
+          continue;
+        }
+
+        const c = coerceGrid(value, name, mod);
+        const ni = c.raw.ni();
+        const nj = c.raw.nj();
+        if (ni !== raw.ni() || nj !== raw.nj()) {
+          if (!c.source) c.raw.delete();
+          throw new HighmapError(
+            `${name}: shape [${ni}, ${nj}] does not match grid shape [${raw.ni()}, ${raw.nj()}]`,
+          );
+        }
+        if (!c.source) owned.push(c.raw);
+        auxRaws.push(c.raw);
+      }
+
+      run(raw, auxRaws);
+    } finally {
+      for (const temp of owned) temp.delete();
+    }
+
     return source ?? wrap(raw);
   };
 
@@ -346,6 +471,100 @@ export function createApi(mod: HighmapModule): Highmap {
       const clippingRatio = options.clippingRatio ?? 10;
       return inplace(grid, "grid", (raw) =>
         mod.hydraulicStream(raw, cErosion, talusRef, ir, clippingRatio),
+      );
+    },
+
+    thermal: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermal(raw, aux[0]!, iterations),
+      );
+    },
+
+    thermalAutoBedrock: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalAutoBedrock(raw, aux[0]!, iterations),
+      );
+    },
+
+    thermalConserve: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      const rate = options.rate ?? 0.5;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalConserve(raw, aux[0]!, iterations, rate),
+      );
+    },
+
+    thermalFlatten: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      const sigmaInf = options.sigmaInf ?? 0.5;
+      const sigmaSup = options.sigmaSup ?? 0;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) =>
+          mod.thermalFlatten(raw, aux[0]!, iterations, sigmaInf, sigmaSup),
+      );
+    },
+
+    thermalOlsen: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalOlsen(raw, aux[0]!, iterations),
+      );
+    },
+
+    thermalRib: (grid, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplace(grid, "grid", (raw) => mod.thermalRib(raw, iterations));
+    },
+
+    thermalInflate: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalInflate(raw, aux[0]!, iterations),
+      );
+    },
+
+    thermalRidge: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalRidge(raw, aux[0]!, iterations),
+      );
+    },
+
+    thermalScree: (grid, talus, zmax, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      return inplaceWithAux(
+        grid,
+        [
+          { value: talus, name: "talus" },
+          { value: zmax, name: "zmax" },
+        ],
+        (raw, aux) => mod.thermalScree(raw, aux[0]!, aux[1]!, iterations),
+      );
+    },
+
+    thermalSchott: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      const intensity = options.intensity ?? 0.2;
+      return inplaceWithAux(
+        grid,
+        [{ value: talus, name: "talus" }],
+        (raw, aux) => mod.thermalSchott(raw, aux[0]!, iterations, intensity),
       );
     },
   };

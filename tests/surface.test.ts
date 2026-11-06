@@ -73,6 +73,16 @@ describe("binding manifest is the source of truth (AD-008)", () => {
       "scale",
       "smoothFill",
       "subtract",
+      "thermal",
+      "thermalAutoBedrock",
+      "thermalConserve",
+      "thermalFlatten",
+      "thermalInflate",
+      "thermalOlsen",
+      "thermalRib",
+      "thermalRidge",
+      "thermalSchott",
+      "thermalScree",
       "warp",
     ]);
 

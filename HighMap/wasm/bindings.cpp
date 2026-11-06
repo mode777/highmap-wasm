@@ -14,6 +14,7 @@
 #include "highmap/array.hpp"
 #include "highmap/boundary.hpp"
 #include "highmap/erosion.hpp"
+#include "highmap/erosion_thermal_cpu.hpp"
 #include "highmap/filters.hpp"
 #include "highmap/primitives/coherent_noise.hpp"
 #include "highmap/range.hpp"
@@ -218,6 +219,79 @@ void hydraulic_stream(hmap::Array &z,
                          clipping_ratio);
 }
 
+// --- thermal family (CPU ports, add-thermal-cpu-port) ------------------------
+
+void thermal(hmap::Array &z, const hmap::Array &talus, int iterations)
+{
+  hmap::thermal(z, talus, iterations);
+}
+
+void thermal_auto_bedrock(hmap::Array       &z,
+                          const hmap::Array &talus,
+                          int                iterations)
+{
+  hmap::thermal_auto_bedrock(z, talus, iterations);
+}
+
+void thermal_conserve(hmap::Array       &z,
+                      const hmap::Array &talus,
+                      int                iterations,
+                      float              rate)
+{
+  hmap::thermal_conserve(z, talus, iterations, rate);
+}
+
+void thermal_flatten(hmap::Array       &z,
+                     const hmap::Array &talus,
+                     int                iterations,
+                     float              sigma_inf,
+                     float              sigma_sup)
+{
+  hmap::thermal_flatten(z, talus, iterations, sigma_inf, sigma_sup);
+}
+
+void thermal_olsen(hmap::Array       &z,
+                   const hmap::Array &talus,
+                   int                iterations)
+{
+  hmap::thermal_olsen(z, talus, iterations);
+}
+
+void thermal_rib(hmap::Array &z, int iterations)
+{
+  hmap::thermal_rib(z, iterations);
+}
+
+void thermal_inflate(hmap::Array       &z,
+                     const hmap::Array &talus,
+                     int                iterations)
+{
+  hmap::thermal_inflate(z, talus, iterations);
+}
+
+void thermal_ridge(hmap::Array       &z,
+                   const hmap::Array &talus,
+                   int                iterations)
+{
+  hmap::thermal_ridge(z, talus, iterations);
+}
+
+void thermal_scree(hmap::Array       &z,
+                   const hmap::Array &talus,
+                   const hmap::Array &zmax,
+                   int                iterations)
+{
+  hmap::thermal_scree(z, talus, zmax, iterations);
+}
+
+void thermal_schott(hmap::Array       &z,
+                    const hmap::Array &talus,
+                    int                iterations,
+                    float              intensity)
+{
+  hmap::thermal_schott(z, talus, iterations, intensity);
+}
+
 } // namespace hmap_wasm
 
 EMSCRIPTEN_BINDINGS(highmap_wasm)
@@ -270,4 +344,14 @@ EMSCRIPTEN_BINDINGS(highmap_wasm)
   function("scale", &hmap_wasm::scale);
   function("hydraulicMusgrave", &hmap_wasm::hydraulic_musgrave);
   function("hydraulicStream", &hmap_wasm::hydraulic_stream);
+  function("thermal", &hmap_wasm::thermal);
+  function("thermalAutoBedrock", &hmap_wasm::thermal_auto_bedrock);
+  function("thermalConserve", &hmap_wasm::thermal_conserve);
+  function("thermalFlatten", &hmap_wasm::thermal_flatten);
+  function("thermalOlsen", &hmap_wasm::thermal_olsen);
+  function("thermalRib", &hmap_wasm::thermal_rib);
+  function("thermalInflate", &hmap_wasm::thermal_inflate);
+  function("thermalRidge", &hmap_wasm::thermal_ridge);
+  function("thermalScree", &hmap_wasm::thermal_scree);
+  function("thermalSchott", &hmap_wasm::thermal_schott);
 }

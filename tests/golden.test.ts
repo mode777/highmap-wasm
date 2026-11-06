@@ -78,6 +78,22 @@ describe("golden scenes", () => {
     expect(sha(t)).toBe(golden["hydraulic-stream-seed11"]!.sha256);
   });
 
+  it("thermal-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.thermal(t, 0.1 / 64, { iterations: 10 });
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["thermal-seed11"]!.sha256);
+  });
+
+  it("thermal-conserve-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.thermalConserve(t, 0.1 / 64, { iterations: 10, rate: 0.5 });
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["thermal-conserve-seed11"]!.sha256);
+  });
+
   it("falloff golden stability with each DistanceFunction", () => {
     // every distance function must stay finite and deterministic
     for (const df of Object.keys(DistanceFunction)) {

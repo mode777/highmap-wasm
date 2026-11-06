@@ -106,3 +106,20 @@ marks the old one superseded — entries are never edited in place.
   (CI and Pages shipped with the showcase). Rationale: the original research
   snapshot predates the bootstrap and showcase work, and stale planning claims
   would otherwise inflate the next change's scope.
+- **AD-017 - Thermal CPU ports live in the upstream source tree.** (2026-11-05)
+  The nine CPU thermal implementations ship as a new
+  `HighMap/src/erosion/thermal_cpu.cpp` plus
+  `HighMap/include/highmap/erosion_thermal_cpu.hpp`, not as files under
+  `HighMap/wasm/`. Rationale: `HighMap/CMakeLists.txt` globs `src/*.cpp`, so
+  the desktop build (the GPU parity oracle) and the wasm build compile the same
+  translation unit from the same source - the same-source property the
+  `wasm-build` spec already relies on - and the parity harness needs no
+  separate target, flag set, or `.cpp`-inclusion tricks. The `wasm-build`
+  requirement now permits *new* files under `HighMap/src`/`HighMap/include` for
+  ported algorithms while still forbidding edits to existing files. Only
+  declarations are added for `thermal_schott`: upstream defines it in
+  `thermal_schott.cpp` but never declares it, so the new header is its first
+  public declaration. Rebase: if upstream ships CPU implementations, expect a
+  duplicate-symbol link error or a duplicate-default-argument compile error and
+  delete the port file plus the header; bindings and tests speak only the
+  `hmap::` names, so no call site changes.
