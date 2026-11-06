@@ -135,7 +135,7 @@
   summary and uploaded artifacts. Verify: push and confirm the job runs both
   suites and publishes metrics; insert a deliberately failing assertion,
   confirm the job fails, and revert.
-- [ ] 6.2 Update `README.md` (API list gains the five hydraulic functions and
+- [x] 6.2 Update `README.md` (API list gains the five hydraulic functions and
   the output-map contract, with the single-threaded cost caveat),
   `docs/wasm-port-research.md` (phase 2: hydraulic family complete, remaining
   `rifts` and `advection_*`), and `docs/decisions.md` (output-map contract,

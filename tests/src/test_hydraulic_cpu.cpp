@@ -51,7 +51,7 @@ namespace
 
 Array scene_ramp(int n = 32)
 {
-  Array z({n, n});
+  Array z(glm::ivec2(n, n));
 
   for (int j = 0; j < n; j++)
     for (int i = 0; i < n; i++)
@@ -355,7 +355,7 @@ void read_image(const cl::Image2D       &img,
 
 void set_image(clwrapper::Run &run, int index, const cl::Image2D &img)
 {
-  run.set_argument(index, img());
+  run.set_argument(index, img);
 }
 
 // Test-local reference for hydraulic_schott: mirrors the wrapper but passes the
