@@ -72,6 +72,36 @@ const scenes = {
     talus.delete();
     return t;
   },
+  "hydraulic-mcdonald-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    m.hydraulicMcdonald(
+      t, 2, 11, null, null,
+      40, 4, 64, 16, 0.2, 10, 1, 1e-4, 9.81, 0.025, 0.01, 0.57,
+      0.1, 2.5e-3, 5e-3, 2.5e-4, 0.01,
+    );
+    return t;
+  },
+  "hydraulic-schott-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    const talus = m.makeArray(64, 64, 0.1 / 64);
+    m.hydraulicSchott(
+      t, 10, talus, null,
+      1, 0.1, 0.2, 0.8, 0.8, 1.3, 1.5, 2.5,
+    );
+    talus.delete();
+    return t;
+  },
+  "hydraulic-vpipes-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    m.hydraulicVpipes(
+      t, 1e-2, true, 0.1, 2, 0.5, 0.5, 0.001, 0.01, 1, 10, true, 0.01,
+      null, null, null, null,
+    );
+    return t;
+  },
 };
 
 const out = {};

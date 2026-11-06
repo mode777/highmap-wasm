@@ -1,7 +1,8 @@
 # WASM port — research notes
 
 Status: **living plan** (research complete; phase 1 and the showcase have
-shipped; phase 2 is next). Last updated 2026-11-05.
+shipped; phase 2 is in progress — the thermal and hydraulic families are done).
+Last updated 2026-11-06.
 Research base: fork of [ottolink-dev/HighMap](https://github.com/ottolink-dev/HighMap)
 at commit `4fb63ae6` (*Merge pull request #463 from ottolink-dev/perf/trench*), 2026-11-05.
 An earlier pass was done on the copy pinned by the Hesiod submodule
@@ -172,8 +173,13 @@ Phases:
    `HighMap/src/erosion/thermal_cpu.cpp` with declarations in
    `HighMap/include/highmap/erosion_thermal_cpu.hpp`, plus the existing CPU
    `thermal_schott`; validated against desktop OpenCL output (same
-   seeds/parameters) by the `thermal-parity` CI job. Remaining:
-   `hydraulic_{mcdonald,schott,vpipes}`, `rifts`, `advection_*`.
+   seeds/parameters) by the `erosion-parity` CI job. Hydraulic family **done**
+   (2026-11-06): `hydraulic_mcdonald`, `hydraulic_mcdonald_multiscale`,
+   `hydraulic_schott`, `hydraulic_schott_erosion` and `hydraulic_vpipes` in
+   `HighMap/src/erosion/hydraulic_cpu.cpp` with declarations in
+   `HighMap/include/highmap/erosion_hydraulic_cpu.hpp`; Schott and vpipes are
+   compared through direct kernel launches because the pinned wrappers are
+   broken (`docs/hydraulic-parity.md`). Remaining: `rifts`, `advection_*`.
 3. **Harden & publish — partially done.** CI (GitHub Actions emscripten
    build) and the Pages showcase shipped with
    `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. Remaining:

@@ -10,10 +10,12 @@
 
 #include <emscripten/bind.h>
 #include <cstdint>
+#include <vector>
 
 #include "highmap/array.hpp"
 #include "highmap/boundary.hpp"
 #include "highmap/erosion.hpp"
+#include "highmap/erosion_hydraulic_cpu.hpp"
 #include "highmap/erosion_thermal_cpu.hpp"
 #include "highmap/filters.hpp"
 #include "highmap/primitives/coherent_noise.hpp"
@@ -292,6 +294,192 @@ void thermal_schott(hmap::Array       &z,
   hmap::thermal_schott(z, talus, iterations, intensity);
 }
 
+// --- hydraulic family (CPU ports, add-hydraulic-cpu-ports) -------------------
+
+std::vector<int> to_int_vector(const emscripten::val &values)
+{
+  std::vector<int> out;
+  const unsigned   length = values["length"].as<unsigned>();
+  out.reserve(length);
+  for (unsigned i = 0; i < length; ++i) out.push_back(values[i].as<int>());
+  return out;
+}
+
+void hydraulic_mcdonald(hmap::Array        &z,
+                        int                 steps,
+                        std::uint32_t       seed,
+                        hmap::Array        *p_sediment_map,
+                        hmap::Array        *p_discharge_map,
+                        float               world_extent_km,
+                        float               z_scale_km,
+                        int                 samples,
+                        int                 maxage,
+                        float               lrate,
+                        float               time_step,
+                        float               rainfall,
+                        float               evap_rate,
+                        float               gravity,
+                        float               viscosity,
+                        float               bed_shear,
+                        float               crit_slope,
+                        float               settle_rate,
+                        float               thermal_rate,
+                        float               deposition_rate,
+                        float               suspension_rate,
+                        float               exit_slope)
+{
+  hmap::hydraulic_mcdonald(z,
+                           steps,
+                           seed,
+                           p_sediment_map,
+                           p_discharge_map,
+                           world_extent_km,
+                           z_scale_km,
+                           samples,
+                           maxage,
+                           lrate,
+                           time_step,
+                           rainfall,
+                           evap_rate,
+                           gravity,
+                           viscosity,
+                           bed_shear,
+                           crit_slope,
+                           settle_rate,
+                           thermal_rate,
+                           deposition_rate,
+                           suspension_rate,
+                           exit_slope);
+}
+
+void hydraulic_mcdonald_multiscale(hmap::Array        &z,
+                                   std::uint32_t       seed,
+                                   const emscripten::val &steps_per_level,
+                                   hmap::Array        *p_sediment_map,
+                                   hmap::Array        *p_discharge_map,
+                                   float               world_extent_km,
+                                   float               z_scale_km,
+                                   int                 samples,
+                                   int                 maxage,
+                                   float               lrate,
+                                   float               time_step,
+                                   float               rainfall,
+                                   float               evap_rate,
+                                   float               gravity,
+                                   float               viscosity,
+                                   float               bed_shear,
+                                   float               crit_slope,
+                                   float               settle_rate,
+                                   float               thermal_rate,
+                                   float               deposition_rate,
+                                   float               suspension_rate,
+                                   float               exit_slope)
+{
+  hmap::hydraulic_mcdonald_multiscale(z,
+                                      seed,
+                                      to_int_vector(steps_per_level),
+                                      p_sediment_map,
+                                      p_discharge_map,
+                                      world_extent_km,
+                                      z_scale_km,
+                                      samples,
+                                      maxage,
+                                      lrate,
+                                      time_step,
+                                      rainfall,
+                                      evap_rate,
+                                      gravity,
+                                      viscosity,
+                                      bed_shear,
+                                      crit_slope,
+                                      settle_rate,
+                                      thermal_rate,
+                                      deposition_rate,
+                                      suspension_rate,
+                                      exit_slope);
+}
+
+void hydraulic_schott(hmap::Array       &z,
+                      int                iterations,
+                      const hmap::Array &talus,
+                      hmap::Array       *p_flow,
+                      float              c_erosion,
+                      float              c_thermal,
+                      float              c_deposition,
+                      float              flow_acc_exponent,
+                      float              flow_acc_exponent_depo,
+                      float              flow_routing_exponent,
+                      float              thermal_weight,
+                      float              deposition_weight)
+{
+  hmap::hydraulic_schott(z,
+                         iterations,
+                         talus,
+                         c_erosion,
+                         c_thermal,
+                         c_deposition,
+                         flow_acc_exponent,
+                         flow_acc_exponent_depo,
+                         flow_routing_exponent,
+                         thermal_weight,
+                         deposition_weight,
+                         p_flow);
+}
+
+void hydraulic_schott_erosion(hmap::Array &z,
+                              int          iterations,
+                              hmap::Array *p_flow,
+                              float        c_erosion,
+                              float        flow_acc_exponent,
+                              float        flow_routing_exponent)
+{
+  hmap::hydraulic_schott_erosion(z,
+                                 iterations,
+                                 c_erosion,
+                                 flow_acc_exponent,
+                                 flow_routing_exponent,
+                                 nullptr,
+                                 p_flow);
+}
+
+void hydraulic_vpipes(hmap::Array &z,
+                      float        water_height,
+                      bool         maintain_water_volume,
+                      float        evap_rate,
+                      int          iterations,
+                      float        dt,
+                      float        k_capacity,
+                      float        k_erode,
+                      float        k_depose,
+                      float        k_discharge_exp,
+                      float        downcutting_max_depth_ratio,
+                      bool         flux_diffusion,
+                      float        flux_diffusion_strength,
+                      hmap::Array *p_water_depth,
+                      hmap::Array *p_sediment,
+                      hmap::Array *p_vel_u,
+                      hmap::Array *p_vel_v)
+{
+  hmap::hydraulic_vpipes(z,
+                         water_height,
+                         maintain_water_volume,
+                         evap_rate,
+                         iterations,
+                         dt,
+                         k_capacity,
+                         k_erode,
+                         k_depose,
+                         k_discharge_exp,
+                         downcutting_max_depth_ratio,
+                         flux_diffusion,
+                         flux_diffusion_strength,
+                         nullptr,
+                         p_water_depth,
+                         p_sediment,
+                         p_vel_u,
+                         p_vel_v);
+}
+
 } // namespace hmap_wasm
 
 EMSCRIPTEN_BINDINGS(highmap_wasm)
@@ -354,4 +542,19 @@ EMSCRIPTEN_BINDINGS(highmap_wasm)
   function("thermalRidge", &hmap_wasm::thermal_ridge);
   function("thermalScree", &hmap_wasm::thermal_scree);
   function("thermalSchott", &hmap_wasm::thermal_schott);
+  function("hydraulicMcdonald",
+           &hmap_wasm::hydraulic_mcdonald,
+           allow_raw_pointers());
+  function("hydraulicMcdonaldMultiscale",
+           &hmap_wasm::hydraulic_mcdonald_multiscale,
+           allow_raw_pointers());
+  function("hydraulicSchott",
+           &hmap_wasm::hydraulic_schott,
+           allow_raw_pointers());
+  function("hydraulicSchottErosion",
+           &hmap_wasm::hydraulic_schott_erosion,
+           allow_raw_pointers());
+  function("hydraulicVpipes",
+           &hmap_wasm::hydraulic_vpipes,
+           allow_raw_pointers());
 }

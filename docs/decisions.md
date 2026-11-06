@@ -159,3 +159,44 @@ marks the old one superseded — entries are never edited in place.
   that file (AD-017); the CPU port is correct, and the parity harness compares
   at odd iteration counts, which exercise the same kernel. Recorded as a
   candidate upstream issue in `docs/thermal-parity.md`.
+- **AD-022 - Hydraulic CPU ports live in the upstream source tree.**
+  (2026-11-06) The five CPU hydraulic implementations ship as a new
+  `HighMap/src/erosion/hydraulic_cpu.cpp` plus
+  `HighMap/include/highmap/erosion_hydraulic_cpu.hpp`, following AD-017. The
+  `_cpu` suffix is deliberate: if upstream ever adds its own CPU hydraulic
+  implementations, the duplicate symbols fail loudly at link time, and deleting
+  the port file plus the header is the whole rebase fix because bindings and
+  tests speak only the `hmap::` names. Three pinned GPU wrappers are defective
+  and are recorded, not patched: `hydraulic_schott_gpu.cpp` never binds the
+  kernel's `it` argument; `hydraulic_vpipes_gpu.cpp` launches pre-refactor
+  kernel names that no longer exist; and the `hydraulic_schott` mask overload is
+  declared with a different parameter order than its definition. The parity
+  harness therefore launches the Schott and vpipes kernels directly (see
+  `docs/hydraulic-parity.md`) and does not depend on those wrappers.
+- **AD-023 - Hydraulic output maps are caller-allocated HArrays.**
+  (2026-11-06) The hydraulic functions accept optional output maps
+  (`sediment`, `discharge`, `flow`, `waterDepth`, `velU`, `velV`) as `HArray`s
+  in the options object. The caller allocates them with `makeGrid`; the TS layer
+  validates liveness, shape and aliasing before the wasm call; omitted maps
+  become null `hmap::Array*` outputs. Rationale: it preserves the existing
+  in-place `HArray` return convention, maps directly onto the C++ output
+  pointers, and gives the caller lifetime control. A result object or
+  auto-allocated maps would break the convention or hide memory. The C++ ports
+  also implement the mask/moisture/rain input overloads, but those remain
+  deferred on the JS surface.
+- **AD-024 - Direct-kernel oracle for broken hydraulic wrappers.**
+  (2026-11-06) `tests/src/test_hydraulic_cpu.cpp` launches the Schott and vpipes
+  OpenCL kernels directly instead of going through the pinned wrappers. The
+  Schott reference binds the kernel's `it` argument; the vpipes reference runs
+  the four pass kernels in the fixed dev-branch order. This gives a real
+  GPU-vs-CPU comparison without editing upstream sources. The parity report
+  records the three wrapper gaps as candidate upstream issues. If upstream fixes
+  a wrapper, the direct-kernel helper can be retired or kept as a second oracle.
+- **AD-025 - McDonald parity separates arithmetic from atomic order.**
+  (2026-11-06) The CPU McDonald port processes samples in a fixed index order,
+  so its result is deterministic; the GPU kernel uses atomic adds and is
+  reproducible only up to atomic scheduling order. The parity harness therefore
+  compares a single-sample run per cell (kernel arithmetic fidelity) and a
+  many-sample run by aggregate metrics (total sediment, total discharge, mean
+  absolute elevation change). A per-cell multi-particle bound would be
+  meaningless. The CPU invariants pin determinism and output-map behavior.

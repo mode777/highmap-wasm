@@ -228,3 +228,31 @@ If the port should appear in the gallery:
    environment.
 9. Add a showcase demo if the algorithm is user-visible and example-faithful.
 10. Update this document with anything the next port should know.
+
+## 11. Direct-kernel oracles and output maps (hydraulic family)
+
+The hydraulic ports (AD-022 to AD-025) added four transferable techniques:
+
+- **When the GPU wrapper is broken, test the kernel, not the wrapper.** The
+  pinned `hydraulic_schott` wrapper never binds the kernel's `it` argument, and
+  the `hydraulic_vpipes` wrapper launches kernel names that no longer exist.
+  Editing upstream was not an option, so `tests/src/test_hydraulic_cpu.cpp`
+  launches the kernels directly with `clwrapper::Run` and `cl::Image2D`
+  bindings. This still tests the real GPU arithmetic and keeps the port
+  additive. Record each wrapper gap in the parity report as a candidate
+  upstream issue.
+- **Probe image formats, do not assume `CL_R`.** The pinned CLWrapper hardcodes
+  `CL_R`/`CL_FLOAT`, which some PoCL devices reject. The hydraulic harness
+  probes `CL_R` and then `CL_RGBA`; for `CL_RGBA` it expands one-channel host
+  data to four channels and reads back the `.x` component. The kernels read
+  `.x`, so the fallback is behaviorally equivalent.
+- **Expose output maps as caller-allocated `HArray`s.** The C++ API already
+  speaks `Array*` outputs; the binding uses `allow_raw_pointers()` with `null`
+  for omitted maps, and the TS layer validates liveness, shape and aliasing
+  before the call. This preserves the in-place `HArray` return convention and
+  avoids a union return type or hidden allocations.
+- **Separate arithmetic parity from atomic-order parity.** McDonald's GPU
+  kernel uses atomic adds; a CPU port can be deterministic only by fixing the
+  sample order. Compare one sample per cell, and many samples by aggregate
+  metrics (total sediment, total discharge, mean `|Δz|`). A per-cell
+  multi-particle bound is not meaningful.

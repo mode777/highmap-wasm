@@ -41,6 +41,8 @@ set(HIGHMAP_WASM_SOURCES
   ${HIGHMAP_SRC}/erosion/thermal_cpu.cpp
   # upstream CPU implementation, bound as-is
   ${HIGHMAP_SRC}/erosion/thermal_schott.cpp
+  # CPU ports of the GPU-only hydraulic family (add-hydraulic-cpu-ports)
+  ${HIGHMAP_SRC}/erosion/hydraulic_cpu.cpp
 
   # --- filters / boundary / shading (pyHighMap surface) ----------------------
   ${HIGHMAP_SRC}/filters/filters.cpp

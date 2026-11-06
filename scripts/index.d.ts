@@ -79,6 +79,68 @@ export declare interface HydraulicStreamOptions {
   ir?: number;
   clippingRatio?: number;
 }
+export declare interface HydraulicMcdonaldOptions {
+  sediment?: HArray;
+  discharge?: HArray;
+  worldExtentKm?: number;
+  zScaleKm?: number;
+  samples?: number;
+  maxage?: number;
+  lrate?: number;
+  timeStep?: number;
+  rainfall?: number;
+  evapRate?: number;
+  gravity?: number;
+  viscosity?: number;
+  bedShear?: number;
+  critSlope?: number;
+  settleRate?: number;
+  thermalRate?: number;
+  depositionRate?: number;
+  suspensionRate?: number;
+  exitSlope?: number;
+}
+export declare interface HydraulicMcdonaldMultiscaleOptions
+  extends HydraulicMcdonaldOptions {
+  stepsPerLevel?: number[];
+}
+export declare interface HydraulicSchottOptions {
+  flow?: HArray;
+  iterations?: number;
+  cErosion?: number;
+  cThermal?: number;
+  cDeposition?: number;
+  flowAccExponent?: number;
+  flowAccExponentDepo?: number;
+  flowRoutingExponent?: number;
+  thermalWeight?: number;
+  depositionWeight?: number;
+}
+export declare interface HydraulicSchottErosionOptions {
+  flow?: HArray;
+  iterations?: number;
+  cErosion?: number;
+  flowAccExponent?: number;
+  flowRoutingExponent?: number;
+}
+export declare interface HydraulicVpipesOptions {
+  waterDepth?: HArray;
+  sediment?: HArray;
+  velU?: HArray;
+  velV?: HArray;
+  waterHeight?: number;
+  maintainWaterVolume?: boolean;
+  evapRate?: number;
+  iterations?: number;
+  dt?: number;
+  kCapacity?: number;
+  kErode?: number;
+  kDepose?: number;
+  kDischargeExp?: number;
+  downcuttingMaxDepthRatio?: number;
+  fluxDiffusion?: boolean;
+  fluxDiffusionStrength?: number;
+}
 export declare interface ThermalOptions {
   iterations?: number;
 }
@@ -150,6 +212,30 @@ export declare interface Highmap {
     cErosion: number,
     talusRef: number,
     options?: HydraulicStreamOptions,
+  ): HArray;
+  hydraulicMcdonald(
+    grid: GridLike,
+    steps: number,
+    seed: number,
+    options?: HydraulicMcdonaldOptions,
+  ): HArray;
+  hydraulicMcdonaldMultiscale(
+    grid: GridLike,
+    seed: number,
+    options?: HydraulicMcdonaldMultiscaleOptions,
+  ): HArray;
+  hydraulicSchott(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: HydraulicSchottOptions,
+  ): HArray;
+  hydraulicSchottErosion(
+    grid: GridLike,
+    options?: HydraulicSchottErosionOptions,
+  ): HArray;
+  hydraulicVpipes(
+    grid: GridLike,
+    options?: HydraulicVpipesOptions,
   ): HArray;
   thermal(
     grid: GridLike,

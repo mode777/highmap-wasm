@@ -94,6 +94,30 @@ describe("golden scenes", () => {
     expect(sha(t)).toBe(golden["thermal-conserve-seed11"]!.sha256);
   });
 
+  it("hydraulic-mcdonald-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.hydraulicMcdonald(t, 2, 11, { samples: 64, maxage: 16 });
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["hydraulic-mcdonald-seed11"]!.sha256);
+  });
+
+  it("hydraulic-schott-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.hydraulicSchott(t, 0.1 / 64, { iterations: 10 });
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["hydraulic-schott-seed11"]!.sha256);
+  });
+
+  it("hydraulic-vpipes-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.hydraulicVpipes(t, { iterations: 2 });
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["hydraulic-vpipes-seed11"]!.sha256);
+  });
+
   it("falloff golden stability with each DistanceFunction", () => {
     // every distance function must stay finite and deterministic
     for (const df of Object.keys(DistanceFunction)) {

@@ -61,15 +61,20 @@ console.log(elevation.length);
   `noisePingpong`, `noiseRidged`, `warp`, `falloff`, `clamp`, `remap`,
   `plateau`, `smoothFill`, `hillshade`, plus the algebra layer
   (`add`, `subtract`, `multiply`, `divide`, `scale`) and erosion.
-- **Erosion**: `hydraulicMusgrave`, `hydraulicStream`, and the thermal family —
+- **Erosion**: `hydraulicMusgrave`, `hydraulicStream`, the thermal family —
   `thermal`, `thermalAutoBedrock`, `thermalConserve`, `thermalFlatten`,
   `thermalInflate`, `thermalOlsen`, `thermalRib`, `thermalRidge`,
-  `thermalScree`, `thermalSchott`. `talus` (and `zmax` for `thermalScree`)
-  accepts a **number** (uniform limit) or a **grid** (per-cell limits). These
-  are CPU ports of upstream OpenCL kernels (AD-017).
-- **Deferred**: the mask and deposition-map overloads of the thermal family
-  exist in C++ but are not bound — the JS surface has no mask or output-grid
-  concept yet (recorded in `HighMap/wasm/manifest.md`).
+  `thermalScree`, `thermalSchott` — and the hydraulic family —
+  `hydraulicMcdonald`, `hydraulicMcdonaldMultiscale`, `hydraulicSchott`,
+  `hydraulicSchottErosion`, `hydraulicVpipes`. `talus` (and `zmax` for
+  `thermalScree`) accepts a **number** (uniform limit) or a **grid** (per-cell
+  limits). The hydraulic functions also accept optional, caller-allocated
+  output maps in their options object (`sediment`, `discharge`, `flow`,
+  `waterDepth`, `velU`, `velV`). These are CPU ports of upstream OpenCL
+  kernels (AD-017, AD-022).
+- **Deferred**: the mask and deposition-map overloads of the thermal family,
+  and the mask/moisture-map/rain-map input overloads of the hydraulic family,
+  exist in C++ but are not bound (recorded in `HighMap/wasm/manifest.md`).
 - **Enums**: `hmap.NoiseType.*` and `hmap.DistanceFunction.*` (raw embind
   values; the string enums exported by the package work too).
 - **Grids**: every grid argument accepts an `HArray` **or** a plain
@@ -83,8 +88,12 @@ console.log(elevation.length);
 - **Cost**: erosion is single-threaded. `thermal` at 1024² over 500 iterations
   takes ~16 s in Node on a desktop CPU, 512² over 500 takes ~1.5 s; budget
   iterations accordingly (`docs/thermal-parity.md` has the measurements). The
-  showcase's 256² thermal entries run in under 5 s in a normal desktop browser;
-  headless/software-WebGL timings are much slower and are not representative.
+  hydraulic models are heavier: vpipes keeps roughly ten full-grid state arrays,
+  and McDonald cost scales with `steps × samples × maxage`
+  (`docs/hydraulic-parity.md` records the harness and the measured parity run).
+  The showcase's 256² thermal entries run in under 5 s in a normal desktop
+  browser; headless/software-WebGL timings are much slower and are not
+  representative.
 
 ## Loading the wasm artifact
 

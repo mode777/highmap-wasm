@@ -82,6 +82,23 @@ Deferred: the mask and deposition-map overloads of the thermal family (the
 in C++ but not bound — the JS surface has no mask or output-grid concept yet.
 Add them as optional arguments when that concept lands.
 
+### Hydraulic family (CPU ports)
+
+The hydraulic family was GPU-only upstream; `HighMap/src/erosion/hydraulic_cpu.cpp`
+transcribes the OpenCL kernels into CPU code (AD-022). Output maps are optional,
+caller-allocated `HArray`s in the options object; omitting one is equivalent to
+passing a null output pointer. The C++ ports also implement the mask, moisture
+map and rain map input overloads, but the JS surface binds only the default-map
+forms for now.
+
+| JS name (binding) | C++ call | Binding signature | JS options (defaults) |
+|---|---|---|---|
+| `hydraulicMcdonald` | `hmap::hydraulic_mcdonald` | `(z&, steps, seed, sediment&, discharge&, worldExtentKm, zScaleKm, samples, maxage, lrate, timeStep, rainfall, evapRate, gravity, viscosity, bedShear, critSlope, settleRate, thermalRate, depositionRate, suspensionRate, exitSlope)` | required `steps`, `seed`; `worldExtentKm: 40, zScaleKm: 4, samples: 8192, maxage: 512, lrate: 0.2, timeStep: 10, rainfall: 1, evapRate: 1e-4, gravity: 9.81, viscosity: 0.025, bedShear: 0.01, critSlope: 0.57, settleRate: 0.1, thermalRate: 2.5e-3, depositionRate: 5e-3, suspensionRate: 2.5e-4, exitSlope: 0.01`; optional outputs `sediment`, `discharge` |
+| `hydraulicMcdonaldMultiscale` | `hmap::hydraulic_mcdonald_multiscale` | `(z&, seed, stepsPerLevel, sediment&, discharge&, worldExtentKm, zScaleKm, samples, maxage, lrate, timeStep, rainfall, evapRate, gravity, viscosity, bedShear, critSlope, settleRate, thermalRate, depositionRate, suspensionRate, exitSlope)` | required `seed`; `stepsPerLevel: [512, 256, 128]`; same physical defaults as `hydraulicMcdonald`; optional outputs `sediment`, `discharge` |
+| `hydraulicSchott` | `hmap::hydraulic_schott` | `(z&, iterations, talus&, flow&, cErosion, cThermal, cDeposition, flowAccExponent, flowAccExponentDepo, flowRoutingExponent, thermalWeight, depositionWeight)` | required `talus`; `iterations: 10, cErosion: 1, cThermal: 0.1, cDeposition: 0.2, flowAccExponent: 0.8, flowAccExponentDepo: 0.8, flowRoutingExponent: 1.3, thermalWeight: 1.5, depositionWeight: 2.5`; optional output `flow` |
+| `hydraulicSchottErosion` | `hmap::hydraulic_schott_erosion` | `(z&, iterations, flow&, cErosion, flowAccExponent, flowRoutingExponent)` | `iterations: 10, cErosion: 1, flowAccExponent: 0.8, flowRoutingExponent: 1.3`; optional output `flow` |
+| `hydraulicVpipes` | `hmap::hydraulic_vpipes` | `(z&, waterHeight, maintainWaterVolume, evapRate, iterations, dt, kCapacity, kErode, kDepose, kDischargeExp, downcuttingMaxDepthRatio, fluxDiffusion, fluxDiffusionStrength, waterDepth&, sediment&, velU&, velV&)` | `waterHeight: 1e-2, maintainWaterVolume: true, evapRate: 0.1, iterations: 50, dt: 0.5, kCapacity: 0.5, kErode: 0.001, kDepose: 0.01, kDischargeExp: 1, downcuttingMaxDepthRatio: 10, fluxDiffusion: true, fluxDiffusionStrength: 0.01`; optional outputs `waterDepth`, `sediment`, `velU`, `velV` |
+
 Deferred: the moisture-aware `hydraulic_musgrave` overload (C++ takes an
 extra moisture map). It NaNs on non-constant moisture maps in the pinned
 upstream tree — the sediment transport step divides by the local water level,

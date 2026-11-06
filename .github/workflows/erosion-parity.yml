@@ -1,11 +1,13 @@
-name: thermal-parity
+name: erosion-parity
 
-# GPU-versus-CPU parity for the thermal family (add-thermal-cpu-port, design D6).
+# GPU-versus-CPU parity for the thermal and hydraulic families
+# (add-thermal-cpu-port, add-hydraulic-cpu-ports).
 #
-# The CPU ports in HighMap/src/erosion/thermal_cpu.cpp transcribe the OpenCL
-# kernels; this job is the only place with an OpenCL device (PoCL, CPU ICD), so
-# it is the oracle for the parity claim. A skipped comparison (no device) is a
-# failure, not a pass.
+# The CPU ports in HighMap/src/erosion/{thermal,hydraulic}_cpu.cpp transcribe
+# the OpenCL kernels; this job is the only place with an OpenCL device (PoCL,
+# CPU ICD), so it is the oracle for the parity claim. A skipped comparison (no
+# device) is a failure, not a pass; the only allowed skip is the recorded
+# float-image-format limitation.
 on:
   push:
     branches: [main]
@@ -25,7 +27,7 @@ permissions:
 
 jobs:
   parity:
-    name: GPU-vs-CPU thermal parity
+    name: GPU-vs-CPU erosion parity
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -96,24 +98,43 @@ jobs:
             --gtest_output=xml:build/thermal-parity.xml \
             | tee build/thermal-parity.log
 
-          if grep -qE 'result="skipped"|skipped="[1-9]' build/thermal-parity.xml; then
-            # Only the "no image support" skip is acceptable: thermal_conserve
-            # uses image2d kernels that some devices (PoCL without image
-            # support) cannot run. Any other skip - notably a missing device -
-            # fails the job.
-            unexpected="$(grep -o 'message="[^"]*"' build/thermal-parity.xml \
-              | grep -v 'image support' || true)"
-            if [ -n "${unexpected}" ]; then
-              echo "::error::parity cases were skipped:"
-              echo "${unexpected}"
-              exit 1
-            fi
-          fi
-
           if ! grep -q '^PARITY,' build/thermal-parity.log; then
-            echo "::error::no PARITY metric lines were produced"
+            echo "::error::no thermal PARITY metric lines were produced"
             exit 1
           fi
+
+      - name: Run the hydraulic parity suite
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          ./build/bin/highmap_tests \
+            --gtest_filter='HydraulicCpuInvariants.*:HydraulicParity.*' \
+            --gtest_output=xml:build/hydraulic-parity.xml \
+            | tee build/hydraulic-parity.log
+
+          if ! grep -q '^PARITY,' build/hydraulic-parity.log; then
+            echo "::error::no hydraulic PARITY metric lines were produced"
+            exit 1
+          fi
+
+      - name: Reject unexpected skips
+        run: |
+          set -euo pipefail
+          for xml in build/thermal-parity.xml build/hydraulic-parity.xml; do
+            if grep -qE 'result="skipped"|skipped="[1-9]' "$xml"; then
+              # Only the float-image-format skip is acceptable: the image2d
+              # kernels (thermal_conserve, Schott, vpipes) need a device that
+              # can create CL_R or CL_RGBA float images. Any other skip -
+              # notably a missing device - fails the job.
+              unexpected="$(grep -o 'message="[^"]*"' "$xml" \
+                | grep -v 'image support' || true)"
+              if [ -n "${unexpected}" ]; then
+                echo "::error::parity cases were skipped in ${xml}:"
+                echo "${unexpected}"
+                exit 1
+              fi
+            fi
+          done
 
       - name: Publish the metrics
         if: always()
@@ -126,15 +147,31 @@ jobs:
             echo '```'
             grep '^PARITY,' build/thermal-parity.log || echo "no metrics"
             echo '```'
+            echo ""
+            echo "### Hydraulic GPU/CPU parity metrics"
+            echo ""
+            echo "Oracle: PoCL (CPU OpenCL ICD) on ubuntu-latest."
+            echo ""
+            echo '```'
+            grep '^PARITY,' build/hydraulic-parity.log || echo "no metrics"
+            echo '```'
+            echo ""
+            echo "### McDonald aggregate metrics"
+            echo ""
+            echo '```'
+            grep '^PARITY_AGG,' build/hydraulic-parity.log || echo "no metrics"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: thermal-parity
+          name: erosion-parity
           path: |
             build/thermal-parity.xml
             build/thermal-parity.log
+            build/hydraulic-parity.xml
+            build/hydraulic-parity.log
           if-no-files-found: warn
           retention-days: 30

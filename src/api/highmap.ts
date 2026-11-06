@@ -97,6 +97,79 @@ export interface ThermalSchottOptions extends ThermalOptions {
   intensity?: number;
 }
 
+/** Options shared by the McDonald hydraulic functions. `sediment` and
+ * `discharge` are optional caller-allocated output grids. */
+export interface HydraulicMcdonaldOptions {
+  sediment?: HArray;
+  discharge?: HArray;
+  worldExtentKm?: number;
+  zScaleKm?: number;
+  samples?: number;
+  maxage?: number;
+  lrate?: number;
+  timeStep?: number;
+  rainfall?: number;
+  evapRate?: number;
+  gravity?: number;
+  viscosity?: number;
+  bedShear?: number;
+  critSlope?: number;
+  settleRate?: number;
+  thermalRate?: number;
+  depositionRate?: number;
+  suspensionRate?: number;
+  exitSlope?: number;
+}
+
+/** `hydraulicMcdonaldMultiscale` adds the resolution ladder. */
+export interface HydraulicMcdonaldMultiscaleOptions
+  extends HydraulicMcdonaldOptions {
+  stepsPerLevel?: number[];
+}
+
+/** Options for the full Schott procedure. `flow` is an optional output grid. */
+export interface HydraulicSchottOptions {
+  flow?: HArray;
+  iterations?: number;
+  cErosion?: number;
+  cThermal?: number;
+  cDeposition?: number;
+  flowAccExponent?: number;
+  flowAccExponentDepo?: number;
+  flowRoutingExponent?: number;
+  thermalWeight?: number;
+  depositionWeight?: number;
+}
+
+/** Options for the erosion-only Schott form. */
+export interface HydraulicSchottErosionOptions {
+  flow?: HArray;
+  iterations?: number;
+  cErosion?: number;
+  flowAccExponent?: number;
+  flowRoutingExponent?: number;
+}
+
+/** Options for the virtual-pipes model. The four maps are optional outputs. */
+export interface HydraulicVpipesOptions {
+  waterDepth?: HArray;
+  sediment?: HArray;
+  velU?: HArray;
+  velV?: HArray;
+  waterHeight?: number;
+  maintainWaterVolume?: boolean;
+  evapRate?: number;
+  iterations?: number;
+  dt?: number;
+  kCapacity?: number;
+  kErode?: number;
+  kDepose?: number;
+  kDischargeExp?: number;
+  downcuttingMaxDepthRatio?: number;
+  fluxDiffusion?: boolean;
+  fluxDiffusionStrength?: number;
+}
+
 /**
  * The high-level API surface (grows per the binding manifest, AD-008).
  *
@@ -189,6 +262,37 @@ export interface Highmap {
     options?: HydraulicStreamOptions,
   ): HArray;
 
+  // --- hydraulic family (in place; optional caller-allocated output maps) ------
+
+  hydraulicMcdonald(
+    grid: GridLike,
+    steps: number,
+    seed: number,
+    options?: HydraulicMcdonaldOptions,
+  ): HArray;
+
+  hydraulicMcdonaldMultiscale(
+    grid: GridLike,
+    seed: number,
+    options?: HydraulicMcdonaldMultiscaleOptions,
+  ): HArray;
+
+  hydraulicSchott(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: HydraulicSchottOptions,
+  ): HArray;
+
+  hydraulicSchottErosion(
+    grid: GridLike,
+    options?: HydraulicSchottErosionOptions,
+  ): HArray;
+
+  hydraulicVpipes(
+    grid: GridLike,
+    options?: HydraulicVpipesOptions,
+  ): HArray;
+
   // --- thermal family (in place; talus is uniform or per-cell) ------------------
 
   thermal(
@@ -256,6 +360,31 @@ const FRACTAL_DEFAULTS = {
   lacunarity: 2,
 } as const;
 
+/** Apply the C++ defaults for the shared McDonald parameters. */
+function mcdonaldOptions(options: HydraulicMcdonaldOptions) {
+  return {
+    worldExtentKm: options.worldExtentKm ?? 40,
+    zScaleKm: options.zScaleKm ?? 4,
+    samples: options.samples ?? 8192,
+    maxage: options.maxage ?? 512,
+    lrate: options.lrate ?? 0.2,
+    timeStep: options.timeStep ?? 10,
+    rainfall: options.rainfall ?? 1,
+    evapRate: options.evapRate ?? 1e-4,
+    gravity: options.gravity ?? 9.81,
+    viscosity: options.viscosity ?? 0.025,
+    bedShear: options.bedShear ?? 0.01,
+    critSlope: options.critSlope ?? 0.57,
+    settleRate: options.settleRate ?? 0.1,
+    thermalRate: options.thermalRate ?? 2.5e-3,
+    depositionRate: options.depositionRate ?? 5e-3,
+    suspensionRate: options.suspensionRate ?? 2.5e-4,
+    exitSlope: options.exitSlope ?? 0.01,
+    sediment: options.sediment,
+    discharge: options.discharge,
+  };
+}
+
 export function createApi(mod: HighmapModule): Highmap {
   // The registry releases wasm memory for wrappers garbage collected without
   // an explicit free() (AD-001 safety net).
@@ -314,6 +443,166 @@ export function createApi(mod: HighmapModule): Highmap {
       }
 
       run(raw, auxRaws);
+    } finally {
+      for (const temp of owned) temp.delete();
+    }
+
+    return source ?? wrap(raw);
+  };
+
+  /** Validate a required numeric argument before the wasm call. */
+  const requireNumber = (value: number | undefined, name: string): number => {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new HighmapError(
+        `${name}: required number argument is missing or invalid`,
+      );
+    }
+    return value;
+  };
+
+  /** Validate the McDonald resolution ladder before the wasm call. */
+  const requireIntArray = (
+    value: number[] | undefined,
+    name: string,
+  ): number[] => {
+    if (!Array.isArray(value) || value.some((v) => !Number.isInteger(v))) {
+      throw new HighmapError(`${name}: expected an array of integers`);
+    }
+    return value;
+  };
+
+  /**
+   * Run an in-place op with optional caller-allocated output maps. Outputs must
+   * be live HArrays of the terrain grid's shape and must not alias the terrain
+   * grid or one another; omitted maps become null output pointers (design D4).
+   */
+  const inplaceWithOutputs = (
+    grid: GridLike,
+    outputs: { value: HArray | undefined; name: string }[],
+    run: (raw: RawArray, outRaws: (RawArray | null)[]) => void,
+  ): HArray => {
+    const { raw, source } = coerceGrid(grid, "grid", mod);
+    const outRaws: (RawArray | null)[] = [];
+    const seen = new Set<RawArray>();
+
+    for (const { value, name } of outputs) {
+      if (value === undefined) {
+        outRaws.push(null);
+        continue;
+      }
+      if (!HArray.isWrapped(value)) {
+        throw new HighmapError(`${name}: expected an HArray output grid`);
+      }
+      if (value.isFreed()) {
+        throw new HighmapError(
+          `${name}: the HArray was freed; create a new output grid`,
+        );
+      }
+      if (source && value === source) {
+        throw new HighmapError(
+          `${name}: output map must not be the terrain grid`,
+        );
+      }
+      const [ni, nj] = value.shape;
+      if (ni !== raw.ni() || nj !== raw.nj()) {
+        throw new HighmapError(
+          `${name}: shape [${ni}, ${nj}] does not match grid shape [${raw.ni()}, ${raw.nj()}]`,
+        );
+      }
+      const outRaw = value.getRaw();
+      if (seen.has(outRaw)) {
+        throw new HighmapError(
+          `${name}: output map aliases another output map`,
+        );
+      }
+      seen.add(outRaw);
+      outRaws.push(outRaw);
+    }
+
+    run(raw, outRaws);
+    return source ?? wrap(raw);
+  };
+
+  /**
+   * Combined auxiliary-input and output-map form (Schott's talus + flow).
+   * Auxiliary values are materialized exactly like `inplaceWithAux`; outputs
+   * are validated like `inplaceWithOutputs` and may not alias an input.
+   */
+  const inplaceWithAuxAndOutputs = (
+    grid: GridLike,
+    aux: { value: number | GridLike; name: string }[],
+    outputs: { value: HArray | undefined; name: string }[],
+    run: (
+      raw: RawArray,
+      auxRaws: RawArray[],
+      outRaws: (RawArray | null)[],
+    ) => void,
+  ): HArray => {
+    const { raw, source } = coerceGrid(grid, "grid", mod);
+    const owned: RawArray[] = [];
+    const auxRaws: RawArray[] = [];
+    const outRaws: (RawArray | null)[] = [];
+    const seen = new Set<RawArray>();
+
+    try {
+      for (const { value, name } of aux) {
+        if (typeof value === "number") {
+          const temp = mod.makeArray(raw.ni(), raw.nj(), value);
+          owned.push(temp);
+          auxRaws.push(temp);
+          seen.add(temp);
+          continue;
+        }
+
+        const c = coerceGrid(value, name, mod);
+        const ni = c.raw.ni();
+        const nj = c.raw.nj();
+        if (ni !== raw.ni() || nj !== raw.nj()) {
+          if (!c.source) c.raw.delete();
+          throw new HighmapError(
+            `${name}: shape [${ni}, ${nj}] does not match grid shape [${raw.ni()}, ${raw.nj()}]`,
+          );
+        }
+        if (!c.source) owned.push(c.raw);
+        auxRaws.push(c.raw);
+        seen.add(c.raw);
+      }
+
+      for (const { value, name } of outputs) {
+        if (value === undefined) {
+          outRaws.push(null);
+          continue;
+        }
+        if (!HArray.isWrapped(value)) {
+          throw new HighmapError(`${name}: expected an HArray output grid`);
+        }
+        if (value.isFreed()) {
+          throw new HighmapError(
+            `${name}: the HArray was freed; create a new output grid`,
+          );
+        }
+        if (source && value === source) {
+          throw new HighmapError(
+            `${name}: output map must not be the terrain grid`,
+          );
+        }
+        const [ni, nj] = value.shape;
+        if (ni !== raw.ni() || nj !== raw.nj()) {
+          throw new HighmapError(
+            `${name}: shape [${ni}, ${nj}] does not match grid shape [${raw.ni()}, ${raw.nj()}]`,
+          );
+        }
+        const outRaw = value.getRaw();
+        if (seen.has(outRaw)) {
+          throw new HighmapError(
+            `${name}: output map must not alias an input or another output`,
+          );
+        }
+        seen.add(outRaw);
+        outRaws.push(outRaw);
+      }
+
+      run(raw, auxRaws, outRaws);
     } finally {
       for (const temp of owned) temp.delete();
     }
@@ -471,6 +760,184 @@ export function createApi(mod: HighmapModule): Highmap {
       const clippingRatio = options.clippingRatio ?? 10;
       return inplace(grid, "grid", (raw) =>
         mod.hydraulicStream(raw, cErosion, talusRef, ir, clippingRatio),
+      );
+    },
+
+    hydraulicMcdonald: (grid, steps, seed, options = {}) => {
+      const stepsValue = requireNumber(steps, "steps");
+      const seedValue = requireNumber(seed, "seed");
+      const o = mcdonaldOptions(options);
+      return inplaceWithOutputs(
+        grid,
+        [
+          { value: o.sediment, name: "sediment" },
+          { value: o.discharge, name: "discharge" },
+        ],
+        (raw, out) =>
+          mod.hydraulicMcdonald(
+            raw,
+            stepsValue,
+            seedValue,
+            out[0]!,
+            out[1]!,
+            o.worldExtentKm,
+            o.zScaleKm,
+            o.samples,
+            o.maxage,
+            o.lrate,
+            o.timeStep,
+            o.rainfall,
+            o.evapRate,
+            o.gravity,
+            o.viscosity,
+            o.bedShear,
+            o.critSlope,
+            o.settleRate,
+            o.thermalRate,
+            o.depositionRate,
+            o.suspensionRate,
+            o.exitSlope,
+          ),
+      );
+    },
+
+    hydraulicMcdonaldMultiscale: (grid, seed, options = {}) => {
+      const seedValue = requireNumber(seed, "seed");
+      const stepsPerLevel = requireIntArray(
+        options.stepsPerLevel ?? [512, 256, 128],
+        "stepsPerLevel",
+      );
+      const o = mcdonaldOptions(options);
+      return inplaceWithOutputs(
+        grid,
+        [
+          { value: o.sediment, name: "sediment" },
+          { value: o.discharge, name: "discharge" },
+        ],
+        (raw, out) =>
+          mod.hydraulicMcdonaldMultiscale(
+            raw,
+            seedValue,
+            stepsPerLevel,
+            out[0]!,
+            out[1]!,
+            o.worldExtentKm,
+            o.zScaleKm,
+            o.samples,
+            o.maxage,
+            o.lrate,
+            o.timeStep,
+            o.rainfall,
+            o.evapRate,
+            o.gravity,
+            o.viscosity,
+            o.bedShear,
+            o.critSlope,
+            o.settleRate,
+            o.thermalRate,
+            o.depositionRate,
+            o.suspensionRate,
+            o.exitSlope,
+          ),
+      );
+    },
+
+    hydraulicSchott: (grid, talus, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      const cErosion = options.cErosion ?? 1;
+      const cThermal = options.cThermal ?? 0.1;
+      const cDeposition = options.cDeposition ?? 0.2;
+      const flowAccExponent = options.flowAccExponent ?? 0.8;
+      const flowAccExponentDepo = options.flowAccExponentDepo ?? 0.8;
+      const flowRoutingExponent = options.flowRoutingExponent ?? 1.3;
+      const thermalWeight = options.thermalWeight ?? 1.5;
+      const depositionWeight = options.depositionWeight ?? 2.5;
+
+      return inplaceWithAuxAndOutputs(
+        grid,
+        [{ value: talus, name: "talus" }],
+        [{ value: options.flow, name: "flow" }],
+        (raw, aux, out) =>
+          mod.hydraulicSchott(
+            raw,
+            iterations,
+            aux[0]!,
+            out[0]!,
+            cErosion,
+            cThermal,
+            cDeposition,
+            flowAccExponent,
+            flowAccExponentDepo,
+            flowRoutingExponent,
+            thermalWeight,
+            depositionWeight,
+          ),
+      );
+    },
+
+    hydraulicSchottErosion: (grid, options = {}) => {
+      const iterations = options.iterations ?? 10;
+      const cErosion = options.cErosion ?? 1;
+      const flowAccExponent = options.flowAccExponent ?? 0.8;
+      const flowRoutingExponent = options.flowRoutingExponent ?? 1.3;
+
+      return inplaceWithOutputs(
+        grid,
+        [{ value: options.flow, name: "flow" }],
+        (raw, out) =>
+          mod.hydraulicSchottErosion(
+            raw,
+            iterations,
+            out[0]!,
+            cErosion,
+            flowAccExponent,
+            flowRoutingExponent,
+          ),
+      );
+    },
+
+    hydraulicVpipes: (grid, options = {}) => {
+      const waterHeight = options.waterHeight ?? 1e-2;
+      const maintainWaterVolume = options.maintainWaterVolume ?? true;
+      const evapRate = options.evapRate ?? 0.1;
+      const iterations = options.iterations ?? 50;
+      const dt = options.dt ?? 0.5;
+      const kCapacity = options.kCapacity ?? 0.5;
+      const kErode = options.kErode ?? 0.001;
+      const kDepose = options.kDepose ?? 0.01;
+      const kDischargeExp = options.kDischargeExp ?? 1;
+      const downcuttingMaxDepthRatio = options.downcuttingMaxDepthRatio ?? 10;
+      const fluxDiffusion = options.fluxDiffusion ?? true;
+      const fluxDiffusionStrength = options.fluxDiffusionStrength ?? 0.01;
+
+      return inplaceWithOutputs(
+        grid,
+        [
+          { value: options.waterDepth, name: "waterDepth" },
+          { value: options.sediment, name: "sediment" },
+          { value: options.velU, name: "velU" },
+          { value: options.velV, name: "velV" },
+        ],
+        (raw, out) =>
+          mod.hydraulicVpipes(
+            raw,
+            waterHeight,
+            maintainWaterVolume,
+            evapRate,
+            iterations,
+            dt,
+            kCapacity,
+            kErode,
+            kDepose,
+            kDischargeExp,
+            downcuttingMaxDepthRatio,
+            fluxDiffusion,
+            fluxDiffusionStrength,
+            out[0]!,
+            out[1]!,
+            out[2]!,
+            out[3]!,
+          ),
       );
     },
 
