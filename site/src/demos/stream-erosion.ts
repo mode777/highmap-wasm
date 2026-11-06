@@ -21,7 +21,7 @@ const demo: DemoDefinition = {
       panel: "first hydraulic_stream panel",
       referenceImage: "docs/images/ex_hydraulic_stream0.png",
     },
-    resolutionNote:
+    adaptationNote:
       "Ported at 256² with talusRef 5/256; the example uses 1024² and 5/1024. cErosion, ir, and clippingRatio are unchanged.",
   },
   build(hmap) {

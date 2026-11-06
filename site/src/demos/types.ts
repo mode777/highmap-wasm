@@ -32,8 +32,8 @@ export interface DemoMeta {
   /** Vertical scale of the terrain in tile units. */
   relief: number;
   source: DemoSource;
-  /** Recorded when the source example's grid or parameters were adapted. */
-  resolutionNote?: string;
+  /** Recorded when the source example's grid, talus, or iterations were adapted. */
+  adaptationNote?: string;
 }
 
 /** A pure recipe module: metadata plus the builder the worker executes. */

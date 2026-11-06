@@ -1,6 +1,6 @@
 {
   "previewVersion": 3,
-  "capturedAt": "2026-11-05T16:03:14.079Z",
+  "capturedAt": "2026-11-06T13:21:13.830Z",
   "viewport": {
     "width": 640,
     "height": 400,
@@ -46,7 +46,67 @@
     },
     "stream-erosion": {
       "file": "stream-erosion.webp",
-      "sourceHash": "271c533186f8a9d3f6b67470f050a947e58ed026da893c078c599bc5e4f81952",
+      "sourceHash": "684a575b8c68b7b7aa2196e06ae9cf314e8047c3b0eaf7a9d744ed6cab61ea28",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal": {
+      "file": "thermal.webp",
+      "sourceHash": "09a9531a2ae1fe20069aadce1726952e9a132cb7767dc4352f8483e36841c1c8",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-auto-bedrock": {
+      "file": "thermal-auto-bedrock.webp",
+      "sourceHash": "a4c9d3800f5cb6d4d1c39f7d2464e7e1031856ad87b5b1a7960a2cfffafe3c48",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-conserve": {
+      "file": "thermal-conserve.webp",
+      "sourceHash": "619ba047119ac5fbfdd6146fb1ad7320b0604567c7232ce20c2781834f1b3e8a",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-flatten": {
+      "file": "thermal-flatten.webp",
+      "sourceHash": "845ba658c2798d2905a0633c23e43a12c706410ac67936c083e2947d831a5874",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-inflate": {
+      "file": "thermal-inflate.webp",
+      "sourceHash": "63c8b6ba8d8828b59942398ad95ebb514f76580f1010a0a163ddd034bda7885b",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-olsen": {
+      "file": "thermal-olsen.webp",
+      "sourceHash": "e838988ec34e8ec637bb1f6db9e32e2a1c02421eb35f907003a5d225901aa210",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-rib": {
+      "file": "thermal-rib.webp",
+      "sourceHash": "20cc0d7aca13b2c12594f4fd7cd24647e85ecccba7843a2bef3f3390602aef90",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-ridge": {
+      "file": "thermal-ridge.webp",
+      "sourceHash": "3216a55ee045d9427a2312e1f9237a57df95d44d77df095fbe847f0228acf874",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-schott": {
+      "file": "thermal-schott.webp",
+      "sourceHash": "87acbb1133032070a6cf7db91b4b6937fc3b0be91c92eef15fb49ebc96c37ce0",
+      "width": 1280,
+      "height": 800
+    },
+    "thermal-scree": {
+      "file": "thermal-scree.webp",
+      "sourceHash": "438cf1086c4052d414f4227688f39784e4b693d3c7bf53ca400dc9d7648de9b7",
       "width": 1280,
       "height": 800
     },

@@ -69,6 +69,9 @@ const demo: DemoDefinition = {
       example: "examples/ex_noise_fbm/ex_noise_fbm.cpp",
       panel: "fbm banner, PERLIN column",
     },
+    // Optional: record any web-sized deviation from the source values.
+    // adaptationNote:
+    //   "Ported at 256² with talusRef 5/256; the example uses 1024² and 5/1024.",
   },
   build(hmap) {
     const z = hmap.noiseFbm(NoiseType.PERLIN, GRID, [4, 4], 1);
@@ -93,7 +96,10 @@ Rules:
   algorithms.
 - `source.example` is a real repository-relative C++ path, and `source.panel`
   names the panel or variant that was ported. Keep the example's grid, seed,
-  and parameters unless the metadata records a resolution adaptation.
+  and parameters unless `adaptationNote` records a web-sized deviation.
+- `adaptationNote` is optional and states both the source and shipped values
+  when the grid resolution, talus, or iteration budget differs from the
+  example; the detail page shows it as "Adaptation".
 - The builder owns every `HArray` it creates and frees it in `finally`. It must
   not import three.js, the DOM, or browser-only APIs; the root Node test imports
   it directly. Return `copyOut(grid)` so the worker receives JS-owned data.
@@ -101,6 +107,22 @@ Rules:
   `temperate`, `arid`, `volcanic`, `arctic`.
 - Do not add a composite recipe that is not a straight port of an example.
   `hydraulicMusgrave` stays out while its numerical stability is unresolved.
+
+## Thermal coverage
+
+The catalog includes one entry for each CPU thermal variant: `thermal`,
+`thermal-conserve`, `thermal-auto-bedrock`, `thermal-flatten`, `thermal-olsen`,
+`thermal-rib`, `thermal-ridge`, `thermal-inflate`, `thermal-scree`, and
+`thermal-schott`.
+
+All ten use a 256² grid. `thermal-conserve`, `thermal-flatten`, and
+`thermal-olsen` use 100 iterations instead of the examples' 500; olsen also
+scales its talus from `4/1024` to `4/256`. The ridge family (`thermal-ridge`,
+`thermal-inflate`, `thermal-scree`) scales its talus from `2/1024` to `2/256`.
+Those deviations are recorded in each demo's `adaptationNote`.
+
+The three O(64) variants are slow in a browser (roughly 19–98 s), so capture
+their previews headful with the extended timeout described below.
 
 ## Add a demo
 
@@ -126,6 +148,19 @@ npm run thumbnails:capture
 The script starts `vite preview` on an OS-assigned port, drives Chrome through
 `puppeteer-core`, opens `#/p/<id>?preview=1`, waits for the rendered specimen,
 and writes `src/assets/previews/<id>.webp` plus `manifest.json`.
+
+The three O(64) thermal recipes take minutes to generate in a browser, and
+headless Chrome is slower than headful. For a full capture, run headful with an
+extended generation timeout:
+
+```sh
+CAPTURE_HEADFUL=1 CAPTURE_TIMEOUT_MS=300000 npm run thumbnails:capture
+```
+
+```powershell
+# PowerShell
+$env:CAPTURE_HEADFUL = "1"; $env:CAPTURE_TIMEOUT_MS = "300000"; npm run thumbnails:capture
+```
 
 Chrome discovery:
 

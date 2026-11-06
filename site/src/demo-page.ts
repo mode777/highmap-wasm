@@ -150,8 +150,8 @@ export class DemoPage {
       ),
     );
     fact("Panel", demo.meta.source.panel);
-    if (demo.meta.resolutionNote) {
-      fact("Resolution", demo.meta.resolutionNote);
+    if (demo.meta.adaptationNote) {
+      fact("Adaptation", demo.meta.adaptationNote);
     }
     if (demo.meta.source.referenceImage) {
       fact(

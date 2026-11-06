@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { initHighmap, type Highmap } from "../src/index.ts";
 import { demos, FAMILIES } from "../site/src/demos/index.js";
 import { demoSources } from "../site/src/demos/sources.js";
@@ -16,9 +16,15 @@ beforeAll(async () => {
   hmap = await initHighmap();
 });
 
+// The recipes are synchronous and CPU-bound; yield between tests so Vitest can
+// flush its task-update RPC messages instead of timing out on a long run.
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+});
+
 describe("showcase catalog contract", () => {
-  it("has nine unique, kebab-case entries in known families", () => {
-    expect(demos).toHaveLength(9);
+  it("has nineteen unique, kebab-case entries in known families", () => {
+    expect(demos).toHaveLength(19);
     const ids = new Set<string>();
     for (const demo of demos) {
       expect(demo.meta.id).toMatch(/^[a-z0-9-]+$/);
@@ -64,6 +70,29 @@ describe("showcase catalog contract", () => {
     }
   });
 
+  it("covers every CPU thermal variant", () => {
+    const thermalFeatures = [
+      "thermal",
+      "thermalAutoBedrock",
+      "thermalConserve",
+      "thermalFlatten",
+      "thermalOlsen",
+      "thermalRib",
+      "thermalInflate",
+      "thermalRidge",
+      "thermalScree",
+      "thermalSchott",
+    ];
+    const declared = new Set(
+      demos.flatMap((demo) => demo.meta.features as readonly string[]),
+    );
+    for (const feature of thermalFeatures) {
+      expect(declared.has(feature), `missing thermal variant: ${feature}`).toBe(
+        true,
+      );
+    }
+  });
+
   it("does not show hydraulicMusgrave while it is numerically unstable", () => {
     for (const demo of demos) {
       expect(demo.meta.features).not.toContain("hydraulicMusgrave");
@@ -75,8 +104,8 @@ describe("showcase catalog contract", () => {
     const stream = demos.find((demo) => demo.meta.id === "stream-erosion");
     expect(stream).toBeDefined();
     expect(stream?.meta.grid).toEqual([256, 256]);
-    expect(stream?.meta.resolutionNote).toContain("1024");
-    expect(stream?.meta.resolutionNote).toContain("5/256");
+    expect(stream?.meta.adaptationNote).toContain("1024");
+    expect(stream?.meta.adaptationNote).toContain("5/256");
   });
 });
 

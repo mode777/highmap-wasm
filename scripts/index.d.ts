@@ -79,6 +79,19 @@ export declare interface HydraulicStreamOptions {
   ir?: number;
   clippingRatio?: number;
 }
+export declare interface ThermalOptions {
+  iterations?: number;
+}
+export declare interface ThermalConserveOptions extends ThermalOptions {
+  rate?: number;
+}
+export declare interface ThermalFlattenOptions extends ThermalOptions {
+  sigmaInf?: number;
+  sigmaSup?: number;
+}
+export declare interface ThermalSchottOptions extends ThermalOptions {
+  intensity?: number;
+}
 
 export declare interface Highmap {
   readonly NoiseType: Record<NoiseType, number>;
@@ -137,6 +150,53 @@ export declare interface Highmap {
     cErosion: number,
     talusRef: number,
     options?: HydraulicStreamOptions,
+  ): HArray;
+  thermal(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalAutoBedrock(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalConserve(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalConserveOptions,
+  ): HArray;
+  thermalFlatten(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalFlattenOptions,
+  ): HArray;
+  thermalOlsen(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalRib(grid: GridLike, options?: ThermalOptions): HArray;
+  thermalInflate(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalRidge(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalScree(
+    grid: GridLike,
+    talus: number | GridLike,
+    zmax: number | GridLike,
+    options?: ThermalOptions,
+  ): HArray;
+  thermalSchott(
+    grid: GridLike,
+    talus: number | GridLike,
+    options?: ThermalSchottOptions,
   ): HArray;
 }
 

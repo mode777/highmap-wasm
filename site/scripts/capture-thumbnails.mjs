@@ -14,6 +14,12 @@ const VITE_BIN = join(SITE_ROOT, "node_modules", "vite", "bin", "vite.js");
 const PREVIEW_VERSION = 3;
 const VIEWPORT = { width: 640, height: 400, deviceScaleFactor: 2 };
 const QUALITY = 82;
+// The slow thermal recipes need minutes in a browser; headless Chrome is much
+// slower than headful, so allow an opt-in headful run for local captures.
+const HEADFUL = process.env.CAPTURE_HEADFUL === "1";
+const GENERATION_TIMEOUT_MS = Number(
+  process.env.CAPTURE_TIMEOUT_MS ?? 300_000,
+);
 
 const EXCLUDED = new Set([
   "types.ts",
@@ -127,7 +133,7 @@ async function main() {
     }
     browser = await puppeteer.launch({
       executablePath,
-      headless: true,
+      headless: !HEADFUL,
       defaultViewport: VIEWPORT,
       args: [
         "--no-sandbox",
@@ -161,9 +167,11 @@ async function main() {
       });
 
       const url = `${baseUrl}#/p/${encodeURIComponent(id)}?preview=1`;
-      console.log(`==> capturing ${id}`);
+      console.log(`==> capturing ${id}${HEADFUL ? " (headful)" : ""}`);
       await page.goto(url, { waitUntil: "networkidle0", timeout: 60_000 });
-      await page.waitForSelector('[data-demo-ready="true"]', { timeout: 60_000 });
+      await page.waitForSelector('[data-demo-ready="true"]', {
+        timeout: GENERATION_TIMEOUT_MS,
+      });
       await new Promise((resolveDelay) => setTimeout(resolveDelay, 350));
 
       const file = `${id}.webp`;
