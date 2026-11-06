@@ -121,8 +121,9 @@ scales its talus from `4/1024` to `4/256`. The ridge family (`thermal-ridge`,
 `thermal-inflate`, `thermal-scree`) scales its talus from `2/1024` to `2/256`.
 Those deviations are recorded in each demo's `adaptationNote`.
 
-The three O(64) variants are slow in a browser (roughly 19–98 s), so capture
-their previews headful with the extended timeout described below.
+In a normal desktop browser all thermal entries generate in under 5 s. Headless
+capture can be much slower for the O(64) recipes; if a capture stalls, use the
+headful mode and extended timeout described below.
 
 ## Add a demo
 
@@ -149,9 +150,8 @@ The script starts `vite preview` on an OS-assigned port, drives Chrome through
 `puppeteer-core`, opens `#/p/<id>?preview=1`, waits for the rendered specimen,
 and writes `src/assets/previews/<id>.webp` plus `manifest.json`.
 
-The three O(64) thermal recipes take minutes to generate in a browser, and
-headless Chrome is slower than headful. For a full capture, run headful with an
-extended generation timeout:
+Headless Chrome can be much slower than a normal browser for the heavy thermal
+recipes. If a capture stalls, run headful with an extended generation timeout:
 
 ```sh
 CAPTURE_HEADFUL=1 CAPTURE_TIMEOUT_MS=300000 npm run thumbnails:capture

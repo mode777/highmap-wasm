@@ -14,8 +14,8 @@ const VITE_BIN = join(SITE_ROOT, "node_modules", "vite", "bin", "vite.js");
 const PREVIEW_VERSION = 3;
 const VIEWPORT = { width: 640, height: 400, deviceScaleFactor: 2 };
 const QUALITY = 82;
-// The slow thermal recipes need minutes in a browser; headless Chrome is much
-// slower than headful, so allow an opt-in headful run for local captures.
+// Headless Chrome can be much slower than a normal browser for the heavy
+// thermal recipes, so allow an opt-in headful run and a longer timeout.
 const HEADFUL = process.env.CAPTURE_HEADFUL === "1";
 const GENERATION_TIMEOUT_MS = Number(
   process.env.CAPTURE_TIMEOUT_MS ?? 300_000,

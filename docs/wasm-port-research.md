@@ -98,7 +98,9 @@ variants have CPU transcriptions in `src/erosion/thermal_cpu.cpp` (declared in
 `include/highmap/erosion_thermal_cpu.hpp`), `thermal_schott` is bound from the
 upstream CPU implementation, and GPU-vs-CPU parity is enforced by the
 `thermal-parity` CI job (`docs/thermal-parity.md`). See AD-017 for why the
-ports live in the upstream source tree rather than under `HighMap/wasm/`.
+ports live in the upstream source tree rather than under `HighMap/wasm/`, and
+`docs/porting-learnings.md` for the transferable checklist for the remaining
+GPU-only algorithms.
 
 ## 3. Dependency audit for emscripten
 

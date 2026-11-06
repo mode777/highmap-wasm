@@ -82,7 +82,9 @@ console.log(elevation.length);
   `FinalizationRegistry` reclaims forgotten wrappers).
 - **Cost**: erosion is single-threaded. `thermal` at 1024² over 500 iterations
   takes ~16 s in Node on a desktop CPU, 512² over 500 takes ~1.5 s; budget
-  iterations accordingly (`docs/thermal-parity.md` has the measurements).
+  iterations accordingly (`docs/thermal-parity.md` has the measurements). The
+  showcase's 256² thermal entries run in under 5 s in a normal desktop browser;
+  headless/software-WebGL timings are much slower and are not representative.
 
 ## Loading the wasm artifact
 
@@ -130,8 +132,9 @@ exception: a guarded zero-water divisor in
 and keeps desktop and wasm code identical (AD-014).
 
 Architecture and decision log: `docs/decisions.md`. Port research:
-`docs/wasm-port-research.md`. This repository is spec-driven with OpenSpec
-(`openspec/`).
+`docs/wasm-port-research.md`. Porting lessons for the remaining GPU-only
+algorithms: `docs/porting-learnings.md`. This repository is spec-driven with
+OpenSpec (`openspec/`).
 
 ## License
 

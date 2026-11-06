@@ -17,11 +17,12 @@ Measured on the current wasm artifact at 256² with 500 iterations: `thermal`
 O(64) per cell per iteration (each neighbour recomputes its own neighbour
 table), so their cost is inherent to the ported kernel, not a build issue.
 
-Browser measurements differ sharply from Node: at 100 iterations, Chrome takes
-roughly 76 s for `thermal_conserve`, 98 s for `thermal_flatten`, and 19 s for
-`thermal_olsen` (headful; headless is slower still). That cost is accepted for
-this change. The detail page keeps its non-blocking loading state, and previews
-are captured headful with an extended timeout.
+At the shipped 100 iterations, all ten thermal entries generate in under 5 s
+per specimen in a normal desktop browser. Headless Chrome with software
+WebGL/SwiftShader was an order of magnitude slower on the same machine; that is
+a capture-environment artifact, not a UX measurement. The detail page keeps its
+non-blocking loading state, and the capture script accepts a headful run and an
+extended timeout if a headless capture stalls.
 
 ## Goals / Non-Goals
 
@@ -31,8 +32,8 @@ are captured headful with an extended timeout.
   one entry per API variant and every deviation recorded in metadata.
 - A catalog that proves the thermal family is covered and keeps the existing
   deterministic, finite, diorama, and preview guarantees.
-- Detail pages that stay interactive while generation runs, with the three slow
-  variants accepted at roughly 19–98 s in-browser.
+- Detail pages that stay interactive while generation runs; in a normal desktop
+  browser every thermal entry generates in under 5 s.
 
 **Non-Goals:**
 
@@ -78,11 +79,11 @@ representative panel keeps the gallery readable.
 Every entry uses 256². `ex_thermal_olsen` and `ex_thermal_ridge` target 1024²,
 so their talus is scaled from `4/1024` and `2/1024` to `4/256` and `2/256`.
 `thermal_conserve`, `thermal_flatten`, and `thermal_olsen` use 100 iterations
-instead of 500. In Node the cost drops from 13–35 s to 0.7–4.4 s; in Chrome the
-same recipes take roughly 19–98 s, which is accepted for this change. The
-result keeps the same landform structure while retaining slightly more relief
-than the 500-iteration reference (`thermal_olsen` roughness changes by under 3%
-after 25 iterations; conserve and flatten smooth more gradually).
+instead of 500. In Node the cost drops from 13–35 s to 0.7–4.4 s; in a normal
+desktop browser all ten entries stay under 5 s per specimen. The result keeps
+the same landform structure while retaining slightly more relief than the
+500-iteration reference (`thermal_olsen` roughness changes by under 3% after 25
+iterations; conserve and flatten smooth more gradually).
 
 The other seven variants keep their example iteration counts (`thermal_rib`
 stays at 5). `thermal_flatten` uses the
@@ -90,12 +91,11 @@ example's second panel (`sigma_sup = 0.05`) because it exercises both
 relaxation terms; `thermal_schott` uses the elevation-aligned talus panel
 because it demonstrates the per-cell talus input.
 
-Alternatives considered: 128² with 25 iterations would bring the three slow
-recipes to roughly 1–6 s in-browser but would change both the grid shape and
-the iteration budget; 500 iterations at 256² is faithful but multiplies the
-already-accepted browser cost. The chosen compromise keeps the source grid
-shape and only records a performance deviation, with the slow browser cost
-explicitly accepted.
+Alternatives considered: 128² with 25 iterations would reduce headless capture
+time but would change both the grid shape and the iteration budget; 500
+iterations at 256² is faithful but multiplies the Node and headless cost. The
+chosen compromise keeps the source grid shape and only records a performance
+deviation; real-browser generation remains under 5 s.
 
 ### 3. Metadata rename from `resolutionNote` to `adaptationNote`
 
@@ -144,10 +144,10 @@ manifest is regenerated.
   10 s per full build pass in Node. → The existing 60 s test timeout is
   sufficient; keep the double-build determinism check rather than weakening
   the spec.
-- **Browser generation is slow and accepted.** The three O(64) recipes take
-  roughly 19–98 s in Chrome, and headless capture is slower still. → Keep the
-  worker and loading state, capture previews headful with an extended timeout,
-  and leave kernel optimization or threading to a separate change.
+- **Headless capture is slower than a real browser.** The three O(64) recipes
+  are fast in a normal browser (under 5 s) but can stall headless Chrome with
+  software WebGL. → Keep the worker and loading state, and use the capture
+  script's headful mode and extended timeout if a headless capture stalls.
 - **Preview capture needs a browser.** → Use the existing script and committed
   WebPs; CI continues to validate hashes without launching a browser.
 - **Ten more previews increase the gallery payload.** → Each WebP is small and

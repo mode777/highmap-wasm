@@ -26,8 +26,9 @@ completed port into visible, inspectable evidence.
     `2/256`).
   - `thermal_conserve`, `thermal_flatten`, and `thermal_olsen` use 100
     iterations instead of 500 because their CPU kernels are O(64) per cell;
-    browser generation for these three is accepted at roughly 19–98 s, while
-    the other seven variants keep their example iteration counts.
+    in a normal desktop browser all ten thermal entries generate in under 5 s
+    per specimen, while the other seven variants keep their example iteration
+    counts.
 - Register the ten modules in the demo catalog and the raw-source map, and
   recapture all gallery previews plus the manifest.
 - Update catalog validation: replace the fixed count of nine, assert that every

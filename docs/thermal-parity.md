@@ -5,7 +5,8 @@ to CPU in `HighMap/src/erosion/thermal_cpu.cpp` by transcribing
 `src/gpu_opencl/kernels/thermal*.cl` (AD-017); the tenth, `thermal_schott`, uses
 the upstream CPU implementation. This document records how the CPU results are
 compared with the GPU oracle, what the measured agreement is, and which
-comparisons the oracle cannot make.
+comparisons the oracle cannot make. Porting lessons for the remaining
+GPU-only algorithms are in `docs/porting-learnings.md`.
 
 ## Oracle and harness
 
@@ -137,5 +138,11 @@ Single-threaded wasm, `thermal`, Windows 11 / Intel Core Ultra 5 335 / Node
 | 512² | 500 | 1.55 s |
 | 1024² | 500 | 15.8 s |
 
-Cost is linear in cells and iterations; the other variants are within the same
-order (each cell visits eight neighbours per iteration).
+This table covers `thermal` only; it is not a family-wide estimate.
+`thermal_conserve`, `thermal_flatten`, and `thermal_olsen` are O(64) per cell
+per iteration (each cell recomputes its neighbours' neighbour tables) and are
+several times slower in Node. In the deployed showcase all ten thermal entries
+generate in under 5 s per specimen at 256² with 100 iterations in a normal
+desktop browser. Headless Chrome with software WebGL/SwiftShader can be an
+order of magnitude slower; that is a capture-environment artifact, not a UX
+measurement. See `docs/porting-learnings.md` §7.
