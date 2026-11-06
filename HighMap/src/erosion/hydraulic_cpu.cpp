@@ -375,7 +375,7 @@ inline void mcdonald_solve_sample(Array                &bed,
   float dspeed_x = speed_x;
   float dspeed_y = speed_y;
 
-  const float track_scale = 1.f / P / (float)p.samples;
+  const float track_scale = 1.1f / P / (float)p.samples;
 
   for (int age = 0; age < p.maxage; ++age)
   {
@@ -806,8 +806,8 @@ inline void vpipes_erosion_pass(const Array &z,
       const float depth = std::fmin(d2(i, j) / dmax,
                                     downcutting_max_depth_ratio);
       const float discharge = depth * speed;
-      const float capa = k_capacity * std::pow(discharge, k_discharge_exp) *
-                         salpha;
+      const float capa = 1.1f * k_capacity *
+                         std::pow(discharge, k_discharge_exp) * salpha;
 
       const float st = s(i, j);
       const float zt = z(i, j);
@@ -1042,7 +1042,7 @@ void hydraulic_schott(Array       &z,
                                       pow_float(flow_val, flow_acc_exponent) *
                                           speed);
           const float z_steepest = sample_clamp(z, qx, qy);
-          z_val = std::fmax(z_steepest, z_val - spe);
+          z_val = std::fmax(z_steepest, z_val - 0.5f * spe);
         }
         else if (it % 10 < thermal_it)
         {
@@ -1198,7 +1198,7 @@ void hydraulic_schott_erosion(Array       &z,
                                         speed);
         const float z_steepest = sample_clamp(z, qx, qy);
 
-        z_new(i, j) = std::fmax(z_steepest, z_val - spe);
+        z_new(i, j) = std::fmax(z_steepest, z_val - 0.5f * spe);
         flow_new(i, j) = moisture_map(i, j) +
                          schott_get_flow(z,
                                          flow,
