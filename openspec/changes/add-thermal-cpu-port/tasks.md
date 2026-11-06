@@ -40,7 +40,7 @@
   input range), a CSV line per case, and `RecordProperty` output. Verify: the
   file is picked up by the `src/*.cpp` glob and the desktop build compiles it in
   the workflow added by 2.2.
-- [ ] 2.2 Create `.github/workflows/thermal-parity.yml`: ubuntu-latest, the apt
+- [x] 2.2 Create `.github/workflows/thermal-parity.yml`: ubuntu-latest, the apt
   set from `cmake.yml` including `pocl-opencl-icd`, configure with examples and
   benchmarks off, build `highmap_tests`, run
   `--gtest_filter='ThermalCpuInvariants.*:ThermalParity.*' --gtest_output=xml`,
