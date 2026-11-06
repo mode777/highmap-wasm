@@ -106,6 +106,12 @@ void thermal_flatten(Array       &z,
                      float        sigma_inf = 0.5f,
                      float        sigma_sup = 0.f); ///< @overload
 
+void thermal_flatten(Array &z,
+                     float  talus,
+                     int    iterations,
+                     float  sigma_inf = 0.5f,
+                     float  sigma_sup = 0.f); ///< @overload
+
 void thermal_inflate(Array &z, const Array &talus, int iterations = 10);
 
 void thermal_inflate(Array       &z,
@@ -113,12 +119,16 @@ void thermal_inflate(Array       &z,
                      const Array &talus,
                      int          iterations = 10); ///< @overload
 
+void thermal_inflate(Array &z, float talus, int iterations = 10); ///< @overload
+
 void thermal_olsen(Array &z, const Array &talus, int iterations);
 
 void thermal_olsen(Array       &z,
                    const Array *p_mask,
                    const Array &talus,
                    int          iterations); ///< @overload
+
+void thermal_olsen(Array &z, float talus, int iterations); ///< @overload
 
 void thermal_rib(Array &z, int iterations);
 
@@ -135,6 +145,11 @@ void thermal_ridge(Array       &z,
                    int          iterations = 10,
                    Array       *p_deposition_map = nullptr); ///< @overload
 
+void thermal_ridge(Array       &z,
+                   float        talus,
+                   int          iterations = 10,
+                   Array       *p_deposition_map = nullptr); ///< @overload
+
 void thermal_scree(Array       &z,
                    const Array &talus,
                    const Array &zmax,
@@ -144,6 +159,12 @@ void thermal_scree(Array       &z,
 void thermal_scree(Array       &z,
                    const Array *p_mask,
                    const Array &talus,
+                   const Array &zmax,
+                   int          iterations = 10,
+                   Array       *p_deposition_map = nullptr); ///< @overload
+
+void thermal_scree(Array       &z,
+                   float        talus,
                    const Array &zmax,
                    int          iterations = 10,
                    Array       *p_deposition_map = nullptr); ///< @overload

@@ -567,6 +567,18 @@ void thermal_flatten(Array       &z,
       { thermal_flatten(a, talus, iterations, sigma_inf, sigma_sup); });
 }
 
+void thermal_flatten(Array &z,
+                     float  talus,
+                     int    iterations,
+                     float  sigma_inf,
+                     float  sigma_sup)
+{
+  if (!validate_non_empty(z)) return;
+
+  Array talus_map(z.shape, talus);
+  thermal_flatten(z, talus_map, iterations, sigma_inf, sigma_sup);
+}
+
 void thermal_olsen(Array &z, const Array &talus, int iterations)
 {
   if (!validate_non_empty(z) || !validate_same_shape(z, talus)) return;
@@ -676,6 +688,14 @@ void thermal_olsen(Array       &z,
       z, p_mask, [&](Array &a) { thermal_olsen(a, talus, iterations); });
 }
 
+void thermal_olsen(Array &z, float talus, int iterations)
+{
+  if (!validate_non_empty(z)) return;
+
+  Array talus_map(z.shape, talus);
+  thermal_olsen(z, talus_map, iterations);
+}
+
 void thermal_rib(Array &z, int iterations)
 {
   if (!validate_non_empty(z)) return;
@@ -762,6 +782,14 @@ void thermal_inflate(Array       &z,
       z, p_mask, [&](Array &a) { thermal_inflate(a, talus, iterations); });
 }
 
+void thermal_inflate(Array &z, float talus, int iterations)
+{
+  if (!validate_non_empty(z)) return;
+
+  Array talus_map(z.shape, talus);
+  thermal_inflate(z, talus_map, iterations);
+}
+
 void thermal_ridge(Array       &z,
                    const Array &talus,
                    int          iterations,
@@ -820,6 +848,17 @@ void thermal_ridge(Array       &z,
                   p_mask,
                   [&](Array &a)
                   { thermal_ridge(a, talus, iterations, p_deposition_map); });
+}
+
+void thermal_ridge(Array       &z,
+                   float        talus,
+                   int          iterations,
+                   Array       *p_deposition_map)
+{
+  if (!validate_non_empty(z)) return;
+
+  Array talus_map(z.shape, talus);
+  thermal_ridge(z, talus_map, iterations, p_deposition_map);
 }
 
 void thermal_scree(Array       &z,
@@ -886,6 +925,19 @@ void thermal_scree(Array       &z,
       p_mask,
       [&](Array &a)
       { thermal_scree(a, talus, zmax, iterations, p_deposition_map); });
+}
+
+void thermal_scree(Array       &z,
+                   float        talus,
+                   const Array &zmax,
+                   int          iterations,
+                   Array       *p_deposition_map)
+{
+  if (!validate_non_empty(z)) return;
+  if (!validate_same_shape(z, zmax)) return;
+
+  Array talus_map(z.shape, talus);
+  thermal_scree(z, talus_map, zmax, iterations, p_deposition_map);
 }
 
 } // namespace hmap

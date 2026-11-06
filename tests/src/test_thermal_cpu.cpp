@@ -258,11 +258,13 @@ TEST(ThermalCpuInvariants, MaskBlendsUntouchedAndFullyErodedGrids)
     for (int i = 0; i < mask.shape.x; i++)
       mask(i, j) = (i < mask.shape.x / 2) ? 0.f : 1.f;
 
+  const Array talus_map(base.shape, 0.01f);
+
   Array full = base;
-  thermal(full, 0.01f, 3);
+  thermal(full, talus_map, 3);
 
   Array masked = base;
-  thermal(masked, &mask, 0.01f, 3);
+  thermal(masked, &mask, talus_map, 3);
 
   for (std::size_t k = 0; k < base.vector.size(); k++)
   {
@@ -459,14 +461,15 @@ TEST_F(ThermalParity, ThermalFlatten)
     for (const float talus_coeff : {0.1f, 2.f})
     {
       const float talus = talus_coeff / (float)base.shape.x;
+      const Array talus_map(base.shape, talus);
 
       for (const int iterations : {1, 10})
       {
         Array cpu = base;
         Array gpu_z = base;
 
-        thermal_flatten(cpu, talus, iterations, 0.5f, 0.f);
-        gpu::thermal_flatten(gpu_z, talus, iterations, 0.5f, 0.f);
+        thermal_flatten(cpu, talus_map, iterations, 0.5f, 0.f);
+        gpu::thermal_flatten(gpu_z, talus_map, iterations, 0.5f, 0.f);
 
         expect_parity("thermal_flatten",
                       scene.name,
@@ -491,14 +494,15 @@ TEST_F(ThermalParity, ThermalOlsen)
     for (const float talus_coeff : {0.1f, 2.f})
     {
       const float talus = talus_coeff / (float)base.shape.x;
+      const Array talus_map(base.shape, talus);
 
       for (const int iterations : {1, 10})
       {
         Array cpu = base;
         Array gpu_z = base;
 
-        thermal_olsen(cpu, talus, iterations);
-        gpu::thermal_olsen(gpu_z, talus, iterations);
+        thermal_olsen(cpu, talus_map, iterations);
+        gpu::thermal_olsen(gpu_z, talus_map, iterations);
 
         expect_parity("thermal_olsen",
                       scene.name,
@@ -550,14 +554,15 @@ TEST_F(ThermalParity, ThermalInflate)
     for (const float talus_coeff : {0.1f, 2.f})
     {
       const float talus = talus_coeff / (float)base.shape.x;
+      const Array talus_map(base.shape, talus);
 
       for (const int iterations : {1, 10})
       {
         Array cpu = base;
         Array gpu_z = base;
 
-        thermal_inflate(cpu, talus, iterations);
-        gpu::thermal_inflate(gpu_z, talus, iterations);
+        thermal_inflate(cpu, talus_map, iterations);
+        gpu::thermal_inflate(gpu_z, talus_map, iterations);
 
         expect_parity("thermal_inflate",
                       scene.name,
@@ -582,14 +587,15 @@ TEST_F(ThermalParity, ThermalRidge)
     for (const float talus_coeff : {0.1f, 2.f})
     {
       const float talus = talus_coeff / (float)base.shape.x;
+      const Array talus_map(base.shape, talus);
 
       for (const int iterations : {1, 10})
       {
         Array cpu = base;
         Array gpu_z = base;
 
-        thermal_ridge(cpu, talus, iterations);
-        gpu::thermal_ridge(gpu_z, talus, iterations);
+        thermal_ridge(cpu, talus_map, iterations);
+        gpu::thermal_ridge(gpu_z, talus_map, iterations);
 
         expect_parity("thermal_ridge",
                       scene.name,
@@ -617,14 +623,15 @@ TEST_F(ThermalParity, ThermalScree)
     for (const float talus_coeff : {0.1f, 2.f})
     {
       const float talus = talus_coeff / (float)base.shape.x;
+      const Array talus_map(base.shape, talus);
 
       for (const int iterations : {1, 10})
       {
         Array cpu = base;
         Array gpu_z = base;
 
-        thermal_scree(cpu, talus, zmax, iterations);
-        gpu::thermal_scree(gpu_z, talus, zmax, iterations);
+        thermal_scree(cpu, talus_map, zmax, iterations);
+        gpu::thermal_scree(gpu_z, talus_map, zmax, iterations);
 
         expect_parity("thermal_scree",
                       scene.name,
@@ -641,7 +648,7 @@ TEST_F(ThermalParity, ThermalScree)
 
 TEST(ThermalCpuInvariants, SchottIsDeterministicAndErodesApexes)
 {
-  Array spike(32, 32, 0.5f);
+  Array spike(glm::ivec2(32, 32), 0.5f);
   spike(16, 16) = 1.f;
 
   Array a = spike;
