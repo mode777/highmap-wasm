@@ -48,7 +48,15 @@ jobs:
       - name: Report the OpenCL platform
         run: |
           sudo apt-get -y install clinfo
-          clinfo -l || true
+          platforms="$(clinfo -l 2>/dev/null || true)"
+          echo "${platforms}"
+          if [ -z "${platforms}" ]; then
+            # Upstream's tests/src/main.cpp calls gpu::init_opencl() before
+            # gtest and aborts when no platform exists, so fail here with a
+            # clear message instead of letting the binary abort.
+            echo "::error::no OpenCL platform available - parity cannot be verified"
+            exit 1
+          fi
 
       # C17 for the third-party C sources: newer runner images default GCC to C23,
       # where a `void f()` declaration means "no arguments" and the vendored

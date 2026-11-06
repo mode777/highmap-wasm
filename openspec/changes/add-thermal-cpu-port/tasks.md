@@ -48,7 +48,7 @@
   the metrics into the job summary. Verify: push and confirm the job runs and
   uploads the artifact; then insert a deliberately failing assertion, confirm
   the job fails, and revert.
-- [ ] 2.3 Add the `thermal` parity case (parameter matrix: 1 and 10 iterations,
+- [x] 2.3 Add the `thermal` parity case (parameter matrix: 1 and 10 iterations,
   talus `0.1/ni` and `2/ni`) and the invariants it can prove without a device
   (zero iterations leaves the interior untouched and extrapolates one border
   cell; repeated calls are byte-identical; deposition is non-negative and does
@@ -159,7 +159,7 @@
   (including `iterations: 10` for the three variants with no C++ default).
   Verify: entries follow the existing numbering and the README/manifest point to
   them.
-- [ ] 7.3 Integration check: clean rebuild
+- [x] 7.3 Integration check: clean rebuild
   (`EMSDK=C:/WS/tools/emsdk bash scripts/build-wasm.sh --no-tests &&
   node scripts/build-js.mjs && npm test`), `openspec validate
   add-thermal-cpu-port`, and `git status` showing additions plus only the

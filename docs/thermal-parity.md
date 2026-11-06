@@ -25,6 +25,10 @@ comparisons the oracle cannot make.
   gtest properties.
 - **Gate**: every parity case must stay under its bound, and a *skipped* case
   fails the job. The only allowed skip is the image-support limitation below.
+  The job checks `clinfo -l` first: upstream's `tests/src/main.cpp` calls
+  `gpu::init_opencl()` before gtest and aborts when no platform exists, so a
+  device-less runner is rejected up front with a clear message instead of a
+  crashed binary.
 
 ### Running it
 
