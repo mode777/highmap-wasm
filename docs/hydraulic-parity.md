@@ -60,34 +60,48 @@ run fails instead of passing silently.
 
 ## Measured agreement
 
-**Status: pending the first green `erosion-parity` run.** The harness and the
-provisional bounds are in place; the table is filled from the CI log once the
-job has run. Until then, the numbers below are targets, not claims.
+CI run of 2026-11-06 (`erosion-parity`), oracle device
+`cpu-haswell-AMD EPYC 9V74 80-Core Processor`, `OpenCL 3.0 PoCL HSTR`,
+Release build, 2 scenes (fBm 32², ramp 32²):
 
-| variant | cases | worst max | worst rms | bound max | bound rms |
-|---|---|---|---|---|---|
-| `hydraulic_mcdonald_single` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `hydraulic_mcdonald_sediment` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `hydraulic_mcdonald_discharge` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `hydraulic_mcdonald_aggregate` | 1 scene | pending | pending | 5% rel. | 5% rel. |
-| `schott_erosion_only` | 2 scenes | pending | pending | 2e-2 | 2e-4 |
-| `schott_erosion_thermal` | 2 scenes | pending | pending | 2e-2 | 2e-4 |
-| `schott_default_mix` | 2 scenes | pending | pending | 2e-2 | 2e-4 |
-| `hydraulic_schott_erosion` | 2 scenes | pending | pending | 2e-2 | 2e-4 |
-| `vpipes_default_1` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `vpipes_default_2` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `vpipes_no_flux_diffusion` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `vpipes_no_maintain` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
-| `vpipes_no_evap` | 2 scenes | pending | pending | 1e-5 | 2e-6 |
+| variant | worst max | worst rms | bound max | bound rms |
+|---|---|---|---|---|
+| `hydraulic_mcdonald_single` | 0 | 0 | 1e-5 | 2e-6 |
+| `hydraulic_mcdonald_sediment` | 0 | 0 | 1e-5 | 2e-6 |
+| `hydraulic_mcdonald_discharge` | 2.5e-7 | 1.9e-8 | 1e-5 | 2e-6 |
+| `hydraulic_mcdonald_aggregate` | 0.27% rel. sed. | 0.11% rel. dis. | 5% | 5% |
+| `schott_erosion_only` | 6.0e-8 | 1.5e-8 | 2e-2 | 2e-4 |
+| `schott_erosion_thermal` | 6.0e-8 | 2.1e-8 | 2e-2 | 2e-4 |
+| `schott_default_mix` | 6.0e-8 | 1.5e-8 | 2e-2 | 2e-4 |
+| `hydraulic_schott_erosion` | 6.0e-8 | 6.8e-9 | 2e-2 | 2e-4 |
+| `vpipes_default_1` | 3.0e-8 | 1.4e-9 | 1e-5 | 2e-6 |
+| `vpipes_default_2` | 6.0e-8 | 2.8e-9 | 1e-5 | 2e-6 |
+| `vpipes_no_flux_diffusion` | 3.0e-8 | 1.4e-9 | 1e-5 | 2e-6 |
+| `vpipes_no_maintain` | 3.0e-8 | 1.5e-9 | 1e-5 | 2e-6 |
+| `vpipes_no_evap` | 3.0e-8 | 3.0e-9 | 1e-5 | 2e-6 |
 
-All values are fractions of the input range unless marked otherwise.
+All values are fractions of the input range unless marked otherwise. Each
+vpipes case also compares `waterDepth`, `sediment`, `velU` and `velV`; the
+worst sediment error was `2.2e-7` absolute (`9.2e-5` of its range) and the
+worst velocity error was `3.1e-4` absolute (`~3e-6` of its range). The sediment
+bound is therefore `5e-4`/`5e-5`, as noted below.
+
+The McDonald aggregate row reports total-sediment and total-discharge relative
+differences; its gating `mean |Δz|` was `4.3e-5` (bound `1e-2`). Per-cell
+`max`/`rms` for that case are `5.4e-3`/`2.8e-4` of range and are diagnostic
+only, because GPU atomic order is not reproducible. The aggregate varies
+slightly run to run: the first oracle run measured `0.42%`/`0.13%` and
+`mean |Δz| = 5.6e-5`, still far inside the bounds.
 
 ## Bounds and calibration
 
-Provisional bounds:
+Frozen bounds (2026-11-06, from the first full oracle run):
 
-- Continuous passes (McDonald single-particle, vpipes): `max <= 1e-5 · range`,
-  `rms <= 2e-6 · range`.
+- Continuous passes (McDonald single-particle, vpipes terrain/depth/velocity):
+  `max <= 1e-5 · range`, `rms <= 2e-6 · range`.
+- Vpipes sediment (a small residual field with cancellation):
+  `max <= 5e-4 · range`, `rms <= 5e-5 · range` — about 5x / 16x the measured
+  worst case.
 - Selection-based Schott passes (steepest-neighbour argmax and discrete
   up/down counts can flip): `max <= 2e-2 · range`, `rms <= 2e-4 · range`.
 - McDonald multi-particle aggregates: `rel_sediment <= 5%`,
@@ -96,9 +110,8 @@ Provisional bounds:
 Calibration rule: one deliberate mutation per algorithm must break its bound —
 a McDonald transfer coefficient, a Schott erosion/phase coefficient, and a
 vpipes capacity coefficient. The mutation is applied once, recorded, and
-reverted. The first CI run's measured values replace the provisional bounds
-with a reviewed table; do not loosen a bound without the measured numbers and a
-mutation check justifying it.
+reverted. Do not loosen a bound without the measured numbers and a mutation
+check justifying it.
 
 ## Known oracle gaps
 

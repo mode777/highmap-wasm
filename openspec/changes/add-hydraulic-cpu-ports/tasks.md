@@ -100,13 +100,13 @@
   `tests/golden.test.ts`, recapture `tests/golden/scenes.json` from the rebuilt
   artifact, and confirm the JSON diff adds only the new scenes. Verify:
   `npm run golden:capture && npm test` is green.
-- [ ] 5.2 Add the direct-kernel oracle helpers to
+- [x] 5.2 Add the direct-kernel oracle helpers to
   `tests/src/test_hydraulic_cpu.cpp`: the `CL_R` → `CL_RGBA` float-image probe
   and binding helper, the Schott reference that passes `it`, and the vpipes
   reference that runs the four pass kernels in the fixed order. Verify: the
   file compiles in the desktop build and the helpers run a 1-iteration smoke
   case on CI without an unexpected skip.
-- [ ] 5.3 Add `HydraulicParity` cases: McDonald single-particle per-cell and
+- [x] 5.3 Add `HydraulicParity` cases: McDonald single-particle per-cell and
   multi-particle aggregate metrics; Schott phase-isolated cases
   (erosion-only, erosion + thermal, default mix) plus the erosion-only form;
   vpipes cases covering flux diffusion, maintain-volume, evaporation and
