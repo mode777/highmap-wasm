@@ -35,6 +35,12 @@ jobs:
         with:
           submodules: recursive
 
+      # Test hook for the no-device path: must land in $GITHUB_ENV before the
+      # platform check and the test run.
+      - name: Simulate a device-less runner
+        if: ${{ inputs.no_device }}
+        run: echo "OCL_ICD_VENDORS=/nonexistent" >> "$GITHUB_ENV"
+
       - name: Install system dependencies
         timeout-minutes: 30
         run: |
@@ -78,10 +84,6 @@ jobs:
         # Bounded parallelism: plain `--parallel` translates to `gmake -j`
         # (unlimited) for Unix Makefiles, which exhausts the runner's memory.
         run: cmake --build build --target highmap_tests --parallel 4
-
-      - name: Simulate a device-less runner
-        if: ${{ inputs.no_device }}
-        run: echo "OCL_ICD_VENDORS=/nonexistent" >> "$GITHUB_ENV"
 
       - name: Run the thermal parity suite
         timeout-minutes: 20
