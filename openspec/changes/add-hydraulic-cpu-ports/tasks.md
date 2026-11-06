@@ -113,12 +113,12 @@
   iteration count. Emit `PARITY,...` CSV lines and gtest properties. Verify:
   the CI parity job runs every case and the provisional bounds hold or are
   calibrated from the measured values.
-- [ ] 5.4 Calibrate and freeze the tolerance table in
+- [x] 5.4 Calibrate and freeze the tolerance table in
   `tests/src/test_hydraulic_cpu.cpp`; run one mutation per algorithm (McDonald
   transfer coefficient, Schott erosion/phase coefficient, vpipes capacity
   coefficient), confirm each breaks its bound, then revert. Verify: CI is green
   with the frozen table and the mutation runs are logged.
-- [ ] 5.5 Write `docs/hydraulic-parity.md`: the oracle device/driver, the exact
+- [x] 5.5 Write `docs/hydraulic-parity.md`: the oracle device/driver, the exact
   harness invocation, the frozen bound table, the mutation-check results, the
   measured metrics of the first green run, the `CL_RGBA` fallback, the three
   wrapper gaps and the McDonald atomic-order split. Update
@@ -128,7 +128,7 @@
 
 ## 6. CI and integration
 
-- [ ] 6.1 Rename `.github/workflows/thermal-parity.yml` to
+- [x] 6.1 Rename `.github/workflows/thermal-parity.yml` to
   `.github/workflows/erosion-parity.yml`, add the hydraulic suite run step,
   update the job name, keep the `no_device` dispatch input, allow only the
   known "no float image support" skips, and include both metric sets in the job

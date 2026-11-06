@@ -113,6 +113,24 @@ vpipes capacity coefficient. The mutation is applied once, recorded, and
 reverted. Do not loosen a bound without the measured numbers and a mutation
 check justifying it.
 
+### Mutation check
+
+Run 2026-11-06 on the same PoCL oracle, with all three mutations applied in one
+temporary commit and then reverted:
+
+| mutation | measured failure | bound | result |
+|---|---|---|---|
+| McDonald track scale `1.0 → 1.1` | single-particle max `3.2e7` (range `3.2e8`), rms `2.7e6`; aggregate relative discharge `0.101` | `1e-5`, `2e-6`; `5%` | failed as required |
+| Schott erosion amount `1.0 → 0.5` | erosion-only max `0.056`, rms `0.017`; default mix max `0.056`; erosion-only form max `0.056` | `2e-2`, `2e-4` | failed as required |
+| Vpipes capacity `1.0 → 1.1` | default-1 terrain max `9.9e-5`, rms `6.4e-5`; depth, sediment and velocity cases also failed | `1e-5`, `2e-6` | failed as required |
+
+The McDonald single-particle mutation changes the discharge field but not the
+terrain (the transfer cap does not bind in that scene); the discharge bound is
+what catches it. The Schott mutation affects both the full procedure and the
+erosion-only form. The vpipes mutation cascades through every map. This confirms
+the bounds are not over-tight: each algorithm's parity case fails when its
+arithmetic is changed, while the unmutated tree is green.
+
 ## Known oracle gaps
 
 1. **`hydraulic_schott` wrapper does not bind `it`.** The pinned
