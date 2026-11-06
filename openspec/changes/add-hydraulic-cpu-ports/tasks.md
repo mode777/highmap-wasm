@@ -142,7 +142,7 @@
   direct-kernel oracle, McDonald atomic-order parity). Verify:
   `node scripts/test-quickstart.mjs` still passes and the research doc no longer
   claims the hydraulic family is unported.
-- [ ] 6.3 Integration check: clean rebuild
+- [x] 6.3 Integration check: clean rebuild
   (`EMSDK=C:/WS/tools/emsdk bash scripts/build-wasm.sh --no-tests &&
   node scripts/build-js.mjs && npm test`), `openspec validate
   add-hydraulic-cpu-ports`, and `git status` showing additions plus only the
