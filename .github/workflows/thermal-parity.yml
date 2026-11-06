@@ -19,7 +19,7 @@ jobs:
   parity:
     name: GPU-vs-CPU thermal parity
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       - name: Check out the source
@@ -28,9 +28,12 @@ jobs:
           submodules: recursive
 
       - name: Install system dependencies
+        timeout-minutes: 15
         run: |
-          sudo apt-get update
-          sudo apt-get -y install libglm-dev libfuse2 ocl-icd-opencl-dev \
+          APT_OPTS="-o Acquire::Retries=5 -o Acquire::http::Timeout=30 \
+            -o Acquire::https::Timeout=30 -o Acquire::ForceIPv4=true"
+          sudo apt-get $APT_OPTS update
+          sudo apt-get $APT_OPTS -y install libglm-dev libfuse2 ocl-icd-opencl-dev \
             pocl-opencl-icd libassimp-dev libopencv-dev libfftw3-dev \
             libgsl-dev libspdlog-dev
 
@@ -55,9 +58,11 @@ jobs:
           -S .
 
       - name: Build the test binary
+        timeout-minutes: 75
         run: cmake --build build --target highmap_tests --parallel
 
       - name: Run the thermal parity suite
+        timeout-minutes: 20
         run: |
           set -euo pipefail
           ./build/bin/highmap_tests \
