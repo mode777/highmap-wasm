@@ -93,6 +93,13 @@ GPU file merely wraps it. Binding it is a curated-source-list addition
 thermal variants above remain GPU-only, so the remaining porting volume is
 the §2 total minus the `thermal_schott` launch path and kernel.
 
+**Update (2026-11-06):** the thermal family is done. The nine GPU-only
+variants have CPU transcriptions in `src/erosion/thermal_cpu.cpp` (declared in
+`include/highmap/erosion_thermal_cpu.hpp`), `thermal_schott` is bound from the
+upstream CPU implementation, and GPU-vs-CPU parity is enforced by the
+`thermal-parity` CI job (`docs/thermal-parity.md`). See AD-017 for why the
+ports live in the upstream source tree rather than under `HighMap/wasm/`.
+
 ## 3. Dependency audit for emscripten
 
 | Dependency | Usage | WASM disposition |
@@ -158,11 +165,13 @@ Phases:
    `HighMap/wasm/manifest.md`; npm package with Node smoke tests. See
    `openspec/changes/archive/2026-11-05-bootstrap-wasm-package/`. The
    shipped module is ~0.5 MB wasm, below the 2–5 MB estimate.
-2. **CPU ports of GPU-only algorithms — next (2–4 weeks).** Thermal family
-   (minus `thermal_schott`, which already has a CPU implementation — see
-   the §2 correction), `hydraulic_{mcdonald,schott,vpipes}`, `rifts`,
-   `advection_*`; validate against desktop OpenCL output (same
-   seeds/parameters). Ports land under `HighMap/wasm/` as additive files.
+2. **CPU ports of GPU-only algorithms - in progress.** Thermal family
+   **done** (2026-11-06): nine variants ported in
+   `HighMap/src/erosion/thermal_cpu.cpp` with declarations in
+   `HighMap/include/highmap/erosion_thermal_cpu.hpp`, plus the existing CPU
+   `thermal_schott`; validated against desktop OpenCL output (same
+   seeds/parameters) by the `thermal-parity` CI job. Remaining:
+   `hydraulic_{mcdonald,schott,vpipes}`, `rifts`, `advection_*`.
 3. **Harden & publish — partially done.** CI (GitHub Actions emscripten
    build) and the Pages showcase shipped with
    `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. Remaining:

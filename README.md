@@ -60,8 +60,16 @@ console.log(elevation.length);
 - **Functions, not classes** (pyHighMap style): `noise`, `noiseFbm`,
   `noisePingpong`, `noiseRidged`, `warp`, `falloff`, `clamp`, `remap`,
   `plateau`, `smoothFill`, `hillshade`, plus the algebra layer
-  (`add`, `subtract`, `multiply`, `divide`, `scale`) and erosion
-  (`hydraulicMusgrave`, `hydraulicStream`).
+  (`add`, `subtract`, `multiply`, `divide`, `scale`) and erosion.
+- **Erosion**: `hydraulicMusgrave`, `hydraulicStream`, and the thermal family —
+  `thermal`, `thermalAutoBedrock`, `thermalConserve`, `thermalFlatten`,
+  `thermalInflate`, `thermalOlsen`, `thermalRib`, `thermalRidge`,
+  `thermalScree`, `thermalSchott`. `talus` (and `zmax` for `thermalScree`)
+  accepts a **number** (uniform limit) or a **grid** (per-cell limits). These
+  are CPU ports of upstream OpenCL kernels (AD-017).
+- **Deferred**: the mask and deposition-map overloads of the thermal family
+  exist in C++ but are not bound — the JS surface has no mask or output-grid
+  concept yet (recorded in `HighMap/wasm/manifest.md`).
 - **Enums**: `hmap.NoiseType.*` and `hmap.DistanceFunction.*` (raw embind
   values; the string enums exported by the package work too).
 - **Grids**: every grid argument accepts an `HArray` **or** a plain
@@ -72,6 +80,9 @@ console.log(elevation.length);
 - **`HArray`**: `shape` (`[ni, nj]`), `data` (live `Float32Array` view,
   re-bound on access), `copyData()` (JS-owned), `free()` (idempotent; a
   `FinalizationRegistry` reclaims forgotten wrappers).
+- **Cost**: erosion is single-threaded. `thermal` at 1024² over 500 iterations
+  takes ~16 s in Node on a desktop CPU, 512² over 500 takes ~1.5 s; budget
+  iterations accordingly (`docs/thermal-parity.md` has the measurements).
 
 ## Loading the wasm artifact
 

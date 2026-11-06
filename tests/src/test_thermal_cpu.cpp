@@ -656,3 +656,35 @@ TEST(ThermalCpuInvariants, SchottIsDeterministicAndErodesApexes)
   for (std::size_t k = 0; k < a.vector.size(); k++)
     EXPECT_TRUE(std::isfinite(a.vector[k])) << "cell " << k;
 }
+
+TEST(ThermalCpuInvariants, BedrockIsALowerBoundForThermal)
+{
+  const Array z0 = scene_fbm();
+  Array       bedrock = z0;
+
+  Array z = z0;
+  thermal(z, 0.01f, 5, &bedrock);
+
+  // interior only: extrapolate_borders() rewrites the one-cell border
+  for (int j = 1; j < z.shape.y - 1; j++)
+    for (int i = 1; i < z.shape.x - 1; i++)
+      EXPECT_GE(z(i, j), bedrock(i, j)) << "cell " << i << "," << j;
+}
+
+TEST(ThermalCpuInvariants, RidgeDepositionIsTheAbsoluteChange)
+{
+  const Array z0 = scene_fbm();
+
+  Array z = z0;
+  Array dep(z.shape);
+
+  thermal_ridge(z, 0.01f, 5, &dep);
+
+  const Array expected = abs(z - z0);
+
+  for (std::size_t k = 0; k < dep.vector.size(); k++)
+  {
+    EXPECT_GE(dep.vector[k], 0.f) << "negative deposition at cell " << k;
+    EXPECT_EQ(dep.vector[k], expected.vector[k]) << "cell " << k;
+  }
+}
