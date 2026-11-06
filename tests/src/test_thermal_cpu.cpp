@@ -35,6 +35,8 @@
 
 #include <gtest/gtest.h>
 
+#include "cl_wrapper/kernel_manager.hpp"
+
 #include "highmap.hpp"
 #include "highmap/erosion_thermal_cpu.hpp"
 
@@ -137,14 +139,23 @@ std::string fmt(double v)
   return std::string(buf);
 }
 
-// thermal_conserve is the only image2d-based variant; some OpenCL
-// implementations (notably PoCL builds without image support) cannot run it.
-bool device_supports_images()
+// thermal_conserve is the only image2d-based variant (CL_R / CL_FLOAT images).
+// Some implementations advertise image support but reject that format, so probe
+// by creating the same 1x1 image CLWrapper would create.
+bool can_create_float_image()
 {
   try
   {
-    return clwrapper::DeviceManager::device()
-               .getInfo<CL_DEVICE_IMAGE_SUPPORT>() == CL_TRUE;
+    cl_int     err = CL_SUCCESS;
+    cl::Image2D probe(clwrapper::KernelManager::context(),
+                      CL_MEM_READ_WRITE,
+                      cl::ImageFormat(CL_R, CL_FLOAT),
+                      1,
+                      1,
+                      0,
+                      nullptr,
+                      &err);
+    return err == CL_SUCCESS;
   }
   catch (...)
   {
@@ -440,9 +451,10 @@ TEST_F(ThermalParity, ThermalAutoBedrock)
 
 TEST_F(ThermalParity, ThermalConserve)
 {
-  if (!device_supports_images())
-    GTEST_SKIP() << "OpenCL device has no image support: thermal_conserve uses "
-                    "image2d kernels and cannot be compared here";
+  if (!can_create_float_image())
+    GTEST_SKIP() << "OpenCL device cannot create CL_R/CL_FLOAT images (no "
+                    "float image support): thermal_conserve uses image2d "
+                    "kernels and cannot be compared here";
 
   for (const auto &scene : all_scenes())
   {

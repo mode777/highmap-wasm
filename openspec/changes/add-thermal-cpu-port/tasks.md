@@ -57,7 +57,7 @@
 
 ## 3. Slice A: core thermal variants on the JS surface
 
-- [ ] 3.1 Bind `thermal`: manifest row (JS name, signature, `iterations: 10`
+- [x] 3.1 Bind `thermal`: manifest row (JS name, signature, `iterations: 10`
   default), `bindings.cpp` wrapper taking `const hmap::Array &talus`, a shared
   `talusGrid` helper in `src/api/highmap.ts` that materializes a constant wasm
   grid for numeric talus and deletes it in `finally`, the module declaration in
@@ -65,7 +65,7 @@
   `src/index.ts`, and the updated expected-name list in `tests/surface.test.ts`.
   Verify: `npx vitest run tests/surface.test.ts` passes and the new name is
   asserted.
-- [ ] 3.2 Create `tests/thermal.test.ts` covering in-place return for `HArray`
+- [x] 3.2 Create `tests/thermal.test.ts` covering in-place return for `HArray`
   input, plain-input isolation, scalar talus equals a constant talus grid,
   omitted options equal explicit defaults, `iterations: 0` interior no-op,
   mismatched talus shape rejection before the wasm call, and byte-identical
@@ -127,7 +127,7 @@
 
 ## 6. Locking the family: goldens, calibration, parity report
 
-- [ ] 6.1 Add two thermal scenes (`thermal-seed11`, `thermal-conserve-seed11`)
+- [x] 6.1 Add two thermal scenes (`thermal-seed11`, `thermal-conserve-seed11`)
   to `scripts/golden-capture.mjs` and `tests/golden.test.ts`, recapture
   `tests/golden/scenes.json` from the rebuilt artifact, and confirm the JSON
   diff adds only the new scenes. Verify: `npm run golden:capture && npm test`
@@ -148,7 +148,7 @@
 
 ## 7. Documentation and integration
 
-- [ ] 7.1 Update `README.md` (API model list gains the ten thermal functions,
+- [x] 7.1 Update `README.md` (API model list gains the ten thermal functions,
   talus as number or grid, the deferred mask/deposition note, and the
   single-threaded cost caveat) and `docs/wasm-port-research.md` (phase 2 status:
   thermal family complete, remaining families listed). Verify:
