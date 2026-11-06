@@ -11,6 +11,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      no_device:
+        description: >-
+          Simulate a device-less runner (sets OCL_ICD_VENDORS to a missing
+          path) to prove the skip guard fails the job.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -63,6 +71,10 @@ jobs:
         # (unlimited) for Unix Makefiles, which exhausts the runner's memory.
         run: cmake --build build --target highmap_tests --parallel 4
 
+      - name: Simulate a device-less runner
+        if: ${{ inputs.no_device }}
+        run: echo "OCL_ICD_VENDORS=/nonexistent" >> "$GITHUB_ENV"
+
       - name: Run the thermal parity suite
         timeout-minutes: 20
         run: |
@@ -73,8 +85,17 @@ jobs:
             | tee build/thermal-parity.log
 
           if grep -qE 'result="skipped"|skipped="[1-9]' build/thermal-parity.xml; then
-            echo "::error::parity cases were skipped - no OpenCL device was available"
-            exit 1
+            # Only the "no image support" skip is acceptable: thermal_conserve
+            # uses image2d kernels that some devices (PoCL without image
+            # support) cannot run. Any other skip - notably a missing device -
+            # fails the job.
+            unexpected="$(grep -o 'message="[^"]*"' build/thermal-parity.xml \
+              | grep -v 'image support' || true)"
+            if [ -n "${unexpected}" ]; then
+              echo "::error::parity cases were skipped:"
+              echo "${unexpected}"
+              exit 1
+            fi
           fi
 
           if ! grep -q '^PARITY,' build/thermal-parity.log; then
