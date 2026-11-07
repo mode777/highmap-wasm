@@ -1,5 +1,10 @@
 import falloff from "./falloff.js";
 import fractalNoise from "./fractal-noise.js";
+import hydraulicMcdonald from "./hydraulic-mcdonald.js";
+import hydraulicMcdonaldMultiscale from "./hydraulic-mcdonald-multiscale.js";
+import hydraulicSchott from "./hydraulic-schott.js";
+import hydraulicSchottErosion from "./hydraulic-schott-erosion.js";
+import hydraulicVpipes from "./hydraulic-vpipes.js";
 import pingpongNoise from "./pingpong-noise.js";
 import plateau from "./plateau.js";
 import ridgedNoise from "./ridged-noise.js";
@@ -39,6 +44,11 @@ export const demos: readonly DemoEntry[] = [
   plateau,
   smoothFill,
   streamErosion,
+  hydraulicMcdonald,
+  hydraulicMcdonaldMultiscale,
+  hydraulicSchott,
+  hydraulicSchottErosion,
+  hydraulicVpipes,
   thermal,
   thermalConserve,
   thermalAutoBedrock,

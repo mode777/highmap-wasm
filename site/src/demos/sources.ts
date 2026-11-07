@@ -1,5 +1,10 @@
 import falloff from "./falloff.ts?raw";
 import fractalNoise from "./fractal-noise.ts?raw";
+import hydraulicMcdonald from "./hydraulic-mcdonald.ts?raw";
+import hydraulicMcdonaldMultiscale from "./hydraulic-mcdonald-multiscale.ts?raw";
+import hydraulicSchott from "./hydraulic-schott.ts?raw";
+import hydraulicSchottErosion from "./hydraulic-schott-erosion.ts?raw";
+import hydraulicVpipes from "./hydraulic-vpipes.ts?raw";
 import pingpongNoise from "./pingpong-noise.ts?raw";
 import plateau from "./plateau.ts?raw";
 import ridgedNoise from "./ridged-noise.ts?raw";
@@ -28,6 +33,11 @@ const sources: Record<string, string> = {
   plateau: plateau,
   "smooth-fill": smoothFill,
   "stream-erosion": streamErosion,
+  "hydraulic-mcdonald": hydraulicMcdonald,
+  "hydraulic-mcdonald-multiscale": hydraulicMcdonaldMultiscale,
+  "hydraulic-schott": hydraulicSchott,
+  "hydraulic-schott-erosion": hydraulicSchottErosion,
+  "hydraulic-vpipes": hydraulicVpipes,
   thermal: thermal,
   "thermal-conserve": thermalConserve,
   "thermal-auto-bedrock": thermalAutoBedrock,

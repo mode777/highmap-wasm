@@ -124,7 +124,7 @@ export interface HydraulicMcdonaldOptions {
 /** `hydraulicMcdonaldMultiscale` adds the resolution ladder. */
 export interface HydraulicMcdonaldMultiscaleOptions
   extends HydraulicMcdonaldOptions {
-  stepsPerLevel?: number[];
+  stepsPerLevel?: readonly number[];
 }
 
 /** Options for the full Schott procedure. `flow` is an optional output grid. */
@@ -462,7 +462,7 @@ export function createApi(mod: HighmapModule): Highmap {
 
   /** Validate the McDonald resolution ladder before the wasm call. */
   const requireIntArray = (
-    value: number[] | undefined,
+    value: readonly number[] | undefined,
     name: string,
   ): number[] => {
     if (!Array.isArray(value) || value.some((v) => !Number.isInteger(v))) {

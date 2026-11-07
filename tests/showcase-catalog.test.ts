@@ -23,8 +23,8 @@ afterEach(async () => {
 });
 
 describe("showcase catalog contract", () => {
-  it("has nineteen unique, kebab-case entries in known families", () => {
-    expect(demos).toHaveLength(19);
+  it("has twenty-four unique, kebab-case entries in known families", () => {
+    expect(demos).toHaveLength(24);
     const ids = new Set<string>();
     for (const demo of demos) {
       expect(demo.meta.id).toMatch(/^[a-z0-9-]+$/);
@@ -90,6 +90,25 @@ describe("showcase catalog contract", () => {
       expect(declared.has(feature), `missing thermal variant: ${feature}`).toBe(
         true,
       );
+    }
+  });
+
+  it("covers every CPU hydraulic variant", () => {
+    const hydraulicFeatures = [
+      "hydraulicMcdonald",
+      "hydraulicMcdonaldMultiscale",
+      "hydraulicSchott",
+      "hydraulicSchottErosion",
+      "hydraulicVpipes",
+    ];
+    const declared = new Set(
+      demos.flatMap((demo) => demo.meta.features as readonly string[]),
+    );
+    for (const feature of hydraulicFeatures) {
+      expect(
+        declared.has(feature),
+        `missing hydraulic variant: ${feature}`,
+      ).toBe(true);
     }
   });
 

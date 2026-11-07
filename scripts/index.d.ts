@@ -102,7 +102,7 @@ export declare interface HydraulicMcdonaldOptions {
 }
 export declare interface HydraulicMcdonaldMultiscaleOptions
   extends HydraulicMcdonaldOptions {
-  stepsPerLevel?: number[];
+  stepsPerLevel?: readonly number[];
 }
 export declare interface HydraulicSchottOptions {
   flow?: HArray;

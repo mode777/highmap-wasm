@@ -99,7 +99,9 @@ Rules:
   and parameters unless `adaptationNote` records a web-sized deviation.
 - `adaptationNote` is optional and states both the source and shipped values
   when the grid resolution, talus, or iteration budget differs from the
-  example; the detail page shows it as "Adaptation".
+  example. It also names any preprocessing step the wasm API cannot express:
+  the step is omitted and recorded, never approximated. The detail page shows
+  the note as "Adaptation".
 - The builder owns every `HArray` it creates and frees it in `finally`. It must
   not import three.js, the DOM, or browser-only APIs; the root Node test imports
   it directly. Return `copyOut(grid)` so the worker receives JS-owned data.
@@ -124,6 +126,39 @@ Those deviations are recorded in each demo's `adaptationNote`.
 In a normal desktop browser all thermal entries generate in under 5 s. Headless
 capture can be much slower for the O(64) recipes; if a capture stalls, use the
 headful mode and extended timeout described below.
+
+## Hydraulic coverage
+
+The catalog includes one entry for each CPU hydraulic variant, in design
+order: `hydraulic-mcdonald` and `hydraulic-mcdonald-multiscale` from the
+post-erosion `z` and `zm` multiscale panels of
+`examples/ex_hydraulic_mcdonald/ex_hydraulic_mcdonald.cpp`;
+`hydraulic-schott` and `hydraulic-schott-erosion` from the `z1` full-Schott
+and `z2` erosion-only panels of
+`examples/ex_hydraulic_schott/ex_hydraulic_schott.cpp`; and `hydraulic-vpipes`
+from the post-erosion `z` panel of
+`examples/ex_hydraulic_vpipes_gpu/ex_hydraulic_vpipes_gpu.cpp`.
+
+`hydraulic-mcdonald-multiscale` and `hydraulic-vpipes` keep the examples'
+512² grid; the other three use 256². Every entry keeps its example's seed,
+noise recipe, and remaining parameters.
+
+The web-sized budgets, each recorded in the demo's `adaptationNote`, are:
+
+- `hydraulic-mcdonald`: 64 steps, 1024 samples, and maxage 64 (example: 256
+  steps, 8192 samples, and maxage 512).
+- `hydraulic-mcdonald-multiscale`: 512 samples, maxage 32, and the
+  `[256, 128, 64]` step ladder (example: 8192 samples and maxage 512).
+- `hydraulic-schott`: 60 iterations (example: 400).
+- `hydraulic-schott-erosion`: 20 iterations (example: 30).
+- `hydraulic-vpipes`: 30 iterations (example default: 50).
+
+The vpipes example applies `bulkify(PRIM_CUBIC_PULSE, 1)` before `remap`. The
+wasm API does not expose `bulkify`, so that pre-pass is omitted and recorded in
+the adaptation note; no substitute is applied.
+
+`hydraulicMusgrave` has no entry while its numerical stability is unresolved.
+The catalog test excludes it and requires the other five hydraulic functions.
 
 ## Add a demo
 

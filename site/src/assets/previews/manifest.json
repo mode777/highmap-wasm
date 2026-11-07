@@ -1,6 +1,6 @@
 {
   "previewVersion": 3,
-  "capturedAt": "2026-11-06T13:21:13.830Z",
+  "capturedAt": "2026-11-07T08:29:02.217Z",
   "viewport": {
     "width": 640,
     "height": 400,
@@ -17,6 +17,36 @@
     "fractal-noise": {
       "file": "fractal-noise.webp",
       "sourceHash": "ca83f1260165b47bd6d33770a48db06b0c890941e953a79b03e11f993e0fa4db",
+      "width": 1280,
+      "height": 800
+    },
+    "hydraulic-mcdonald": {
+      "file": "hydraulic-mcdonald.webp",
+      "sourceHash": "e074aab7a45c355f6f9d7bee3a14c7616e6f04546e38008345293f41308412e1",
+      "width": 1280,
+      "height": 800
+    },
+    "hydraulic-mcdonald-multiscale": {
+      "file": "hydraulic-mcdonald-multiscale.webp",
+      "sourceHash": "991caca5acb2818295e37eef3126e96da575ac3cf0617f6d5dfa8952e703784d",
+      "width": 1280,
+      "height": 800
+    },
+    "hydraulic-schott": {
+      "file": "hydraulic-schott.webp",
+      "sourceHash": "8e012c8b193d23548dd58ebea37463a6b8f3c0849de1f498badad81be86b71da",
+      "width": 1280,
+      "height": 800
+    },
+    "hydraulic-schott-erosion": {
+      "file": "hydraulic-schott-erosion.webp",
+      "sourceHash": "e67188ace081c2890b7570ff014f768871d3e2a2ae107f726958eeb53e3581e7",
+      "width": 1280,
+      "height": 800
+    },
+    "hydraulic-vpipes": {
+      "file": "hydraulic-vpipes.webp",
+      "sourceHash": "a7fae9246f212551262f024cb9e5b1d2eccefc2ad9669255274d88a9fceb1f45",
       "width": 1280,
       "height": 800
     },
