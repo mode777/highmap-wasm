@@ -26,8 +26,11 @@
  * particle accumulators and the count grid are explicitly zeroed - the GPU
  * wrapper allocates them read-write but never uploads zeros - and particles
  * are accumulated in ascending id order and fields in ascending order, whereas
- * the kernel uses a non-atomic +=. All deviations are documented and kept out
- * of the parity bounds.
+ * the kernel uses a non-atomic +=. The two RNG draws of the particle start
+ * position are sequenced x-then-y (kernel element order) instead of being
+ * passed as two arguments of one constructor call, whose evaluation order is
+ * unspecified in C++ and decides which draw lands in x (see draw_start_pos).
+ * All deviations are documented and kept out of the parity bounds.
  *
  * Rebase rule: if upstream ever ships CPU implementations, delete this file
  * and the header. See AD-026 in docs/decisions.md for the placement and the
@@ -90,6 +93,27 @@ inline glm::vec2 g_to_xy_pixel_centered(int gx, int gy, int nx, int ny)
 
 // _common_index.cl: linear_index_g
 inline int linear_index_g(int gx, int gy, int nx) { return gy * nx + gx; }
+
+// advection_particle.cl:36 and :45 draw the starting position as
+//
+//   pos = (float2)((nx - 1) * rand(&rng_state), (ny - 1) * rand(&rng_state));
+//
+// Both calls mutate the same state, so their order decides which draw lands in
+// x. In OpenCL C the vector literal is emitted element by element (clang): x
+// takes the FIRST draw. A C++ two-argument constructor leaves that order
+// unspecified - clang evaluates it left-to-right, GCC right-to-left - so the
+// two draws are sequenced explicitly here instead of being passed as two
+// arguments of one constructor call. This is not cosmetic: swapping them
+// transposes every starting cell and was the entire CPU-vs-GPU divergence
+// measured by the first parity run (see docs/rifts-advection-parity.md,
+// "Particle draw order").
+inline glm::vec2 draw_start_pos(std::uint32_t &rng_state, int nx, int ny)
+{
+  const float rx = rand(rng_state); // x first, in kernel element order
+  const float ry = rand(rng_state); // then y
+
+  return glm::vec2((float)(nx - 1) * rx, (float)(ny - 1) * ry);
+}
 
 // --- mirrored-repeat linear sampler -----------------------------------------
 
@@ -193,8 +217,7 @@ void advection_particle_walk(const Array              &dx,
     glm::vec2 pos;
     if (!has_advection_mask)
     {
-      pos = glm::vec2((float)(nx - 1) * rand(rng_state),
-                      (float)(ny - 1) * rand(rng_state));
+      pos = draw_start_pos(rng_state, nx, ny);
     }
     else
     {
@@ -205,8 +228,7 @@ void advection_particle_walk(const Array              &dx,
       while (tries_count < 100)
       {
         tries_count++;
-        pos = glm::vec2((float)(nx - 1) * rand(rng_state),
-                        (float)(ny - 1) * rand(rng_state));
+        pos = draw_start_pos(rng_state, nx, ny);
 
         const glm::ivec2 g_try((int)pos.x, (int)pos.y);
         if ((*p_advection_mask).vector[linear_index_g(g_try.x, g_try.y, nx)] >

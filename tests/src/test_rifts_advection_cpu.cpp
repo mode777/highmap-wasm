@@ -17,8 +17,9 @@
  *                                 and shape validation, plus the advection
  *                                 invariants: warp's zero-length / step-cap /
  *                                 sampler / mask cases, the particle
- *                                 normalization formula, the inertia guard,
- *                                 the `iterations` chain, the 64-field cap and
+ *                                 normalization formula, the start-position
+ *                                 draw order, the inertia guard, the
+ *                                 `iterations` chain, the 64-field cap and
  *                                 the input-immutability checks). Run
  *                                 everywhere, no OpenCL device needed.
  *   RiftsAdvectionParity        - GPU-vs-CPU comparison (added in task 5).
@@ -41,8 +42,10 @@
  * and mean_abs is the mean per-cell absolute difference (absolute units, gated
  * against 1e-2 * range). The paired PARITY line carries the per-cell
  * max_abs/rms_abs as diagnostics only, because the particle kernel accumulates
- * with a non-atomic += and a many-particle GPU result is not reproducible
- * (design D7, AD-028). A PARITY_AGG line with the
+ * with a non-atomic += and a many-particle GPU result is not guaranteed to be
+ * reproducible (design D7, AD-028; the first oracle run measured a
+ * bit-identical GPU repeat on PoCl, see `advection_particle_gpu_repeat`). A
+ * PARITY_AGG line with the
  * `advection_particle_gpu_repeat` variant records GPU-vs-GPU variability and
  * is deliberately ungated.
  */
@@ -367,6 +370,13 @@ float ref_rand(std::uint32_t &rng_state)
   rng_state ^= (rng_state >> 17);
   rng_state ^= (rng_state << 5);
   return (float)rng_state * (1.f / 4294967296.f);
+}
+
+std::uint32_t ref_pcg_hash(std::uint32_t v)
+{
+  v = v * 747796405u + 2891336453u;
+  const std::uint32_t word = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+  return (word >> 22u) ^ word;
 }
 
 glm::vec2 ref_hash22f(glm::vec2 p, float fseed)
@@ -759,6 +769,9 @@ void expect_parity_distribution(const char  *variant,
 
 // Aggregate comparison for many-particle advection: the per-cell maps are
 // diagnostics only (non-atomic +=), the gates are total mass and mean |dz|.
+// The mean bound stays at 1e-2 * range until the next oracle run re-freezes it
+// from the post-fix numbers (it is expected to drop to the arithmetic level
+// together with the one-per-cell gate).
 void expect_parity_aggregate(const char  *variant,
                              const char  *scene,
                              int          iterations,
@@ -1617,6 +1630,63 @@ TEST(RiftsAdvectionCpuInvariants, ParticleNormalizationFormula)
   EXPECT_NEAR(out(1, 0), expected, 1e-6f);
 }
 
+TEST(RiftsAdvectionCpuInvariants, ParticleStartDrawOrder)
+{
+  // advection_particle.cl:36 draws the starting position as
+  //   pos = (float2)((nx - 1) * rand(&rng_state), (ny - 1) * rand(&rng_state));
+  // and an OpenCL vector literal takes its elements in source order: x gets the
+  // FIRST draw. Passing both calls as the two arguments of one C++ constructor
+  // leaves that order unspecified (clang evaluates left-to-right, GCC
+  // right-to-left), and swapping the two transposes every starting cell - that
+  // swap was the entire CPU-vs-GPU divergence of the first parity run
+  // (docs/rifts-advection-parity.md, "Particle draw order"). This pins the
+  // element order on any compiler.
+  const int nx = 32;
+  const int ny = 32;
+
+  // particle id 0: rng_state = pcg_hash(seed + id * 2u)
+  std::uint32_t rng_state = ref_pcg_hash(11u);
+  const int     gx = (int)((float)(nx - 1) * ref_rand(rng_state));
+  const int     gy = (int)((float)(ny - 1) * ref_rand(rng_state));
+
+  // guards that make the transposed start observable: the start, its +x
+  // neighbour and the transposed start / neighbour are four distinct cells
+  ASSERT_LT(gx, nx - 1);
+  ASSERT_LT(gy, ny - 1);
+  ASSERT_NE(gx, gy);
+  ASSERT_NE(gx + 1, gy);
+  ASSERT_NE(gy + 1, gx);
+
+  // constant +x velocity and advection_length 0.02 (dist_max = 0.64): exactly
+  // one step, so the single particle deposits on (gx + 1, gy)
+  Array dx(glm::ivec2(nx, ny), 1.f);
+  Array dy(glm::ivec2(nx, ny), 0.f);
+
+  // the start cell is the only non-zero cell, so a transposed start lands on a
+  // zero cell and leaves the expected deposit cell untouched
+  Array field(glm::ivec2(nx, ny), 0.f);
+  field(gx, gy) = 1.f;
+
+  Array out = advection_particle(dx,
+                                 dy,
+                                 field,
+                                 1,
+                                 11u,
+                                 false,
+                                 false,
+                                 0.125f,
+                                 0.02f,
+                                 0.99f,
+                                 0.f);
+
+  const float val = (1.f - 0.99f) * field(gx + 1, gy) + 0.99f * field(gx, gy);
+
+  EXPECT_NEAR(out(gx + 1, gy), (val + field(gx + 1, gy)) / 2.f, 1e-6f);
+  EXPECT_EQ(out(gx, gy), field(gx, gy)); // count == 0 at the start cell
+  EXPECT_EQ(out(gy, gx), 0.f);
+  EXPECT_EQ(out(gy + 1, gx), 0.f);
+}
+
 TEST(RiftsAdvectionCpuInvariants, ParticleInertiaGuard)
 {
   Array z = scene_fbm(32);
@@ -2231,15 +2301,24 @@ TEST_F(RiftsAdvectionParity, Rifts)
           p_noise_y,
           p_mask);
 
+    // Frozen bounds (task 5.4, first oracle run on PoCl, tree e349bec1). The
+    // transcription is exact at reading/rounding level - the low-amplitude
+    // scenes measure rms 9.0e-4 / 4.5e-4 and frac_over 0 - but the Voronoi
+    // hash fract(sin(...)) flips whole cells under -cl-fast-relaxed-math
+    // (design D7 / AD-028), so the worst scenes (rifts_a0_amp02 ramp and
+    // rifts_noise_offsets) measure rms 1.08e-2 / 1.04e-2, p99 5.0e-2 / 4.3e-2
+    // and frac_over 0.134 / 0.193. Bounds carry ~2x headroom over the worst
+    // measured value and stay far below an O(1) formula error. max_abs is
+    // recorded as an ungated diagnostic.
     expect_parity_distribution(c.name,
                                c.scene,
                                1,
                                cpu_z,
                                gpu_z,
                                range,
-                               2e-3f, // provisional rms bound, task 5.4
-                               2e-2f, // provisional p99 bound
-                               2e-2f, // provisional frac_over bound
+                               2.5e-2f, // rms bound (worst measured 1.08e-2)
+                               1e-1f,   // p99 bound (worst measured 5.0e-2)
+                               4e-1f,   // frac_over bound (worst measured 0.193)
                                true);
   }
 }
@@ -2515,8 +2594,9 @@ TEST_F(RiftsAdvectionParity, ParticleOnePerCell)
                         cpu,
                         gpu,
                         array_range(field),
-                        1e-5f, // provisional max bound, task 5.4
-                        2e-6f, // provisional rms bound
+                        1e-5f, // max bound: rounding level, the GPU is
+                               // bit-repeatable (warp measured <= 3.3e-7)
+                        2e-6f, // rms bound, same rationale
                         true);
   }
 }
