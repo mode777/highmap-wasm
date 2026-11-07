@@ -43,7 +43,8 @@ decision record is AD-028 in `docs/decisions.md`.
   32², one fBm 64² for the rifts neighbourhood, and a second seeded fBm / a
   cross-oriented ramp as the advected field. Particle aggregates use
   `nparticles = 1000`; the per-cell case uses one particle per cell (1024), so
-  landing cells can still collide (see gap 7).
+  landing cells can still collide (see gap 7), and the single-particle trail
+  case uses `nparticles = 1` on the 32² scenes to avoid collisions entirely.
 - **Gate**: every non-diagnostic case must stay under its bound, and a
   *skipped* case fails the job except for the recorded float-image-format
   limitation. `tests/src/main.cpp` calls `gpu::init_opencl()` before gtest and
@@ -109,14 +110,20 @@ through this suite instead of skipping it.
 
 ## Measured agreement
 
-Two oracle runs are recorded. The **first run** (2026-11-07, tree `e349bec1`)
-exposed the particle draw-order bug and the rifts hash-flip distribution; the
-**second run** (2026-11-07, tree `592074466`) repeated every suite after the
-draw-order fix. The only port change between the runs was the draw-order fix
-(`draw_start_pos()` in `advection_cpu.cpp`); the test gained the
+Two reference oracle runs are recorded. The **first run** (2026-11-07, tree
+`e349bec1`) exposed the particle draw-order bug and the rifts hash-flip
+distribution; the **second run** (2026-11-07, tree `592074466`) repeated every
+suite after the draw-order fix. The only port change between the runs was the
+draw-order fix (`draw_start_pos()` in `advection_cpu.cpp`); the test gained the
 `ParticleStartDrawOrder` invariant. The run-2 numbers are the frozen
 reference; the run-1 tables are kept because they justify the rifts
 recalibration and the particle root cause.
+
+A **third run** (2026-11-08, tree `a66929a77`) is the mutation check. No port
+arithmetic changed except the deliberate rifts hash mutation, but a rebuilt
+oracle shifted PoCl's work-item scheduling and exposed the per-binary nature of
+the particle collision losses. Its measurements are in "Mutation check" and
+drove the one-per-cell gate redesign described below.
 
 ### Second run (2026-11-07, tree `592074466`, post-fix)
 
@@ -242,14 +249,19 @@ non-atomic accumulation is device-undefined, exactly as gap 7 says. PoCL's CPU
 device is much better behaved (one lost deposit instead of most of them), but
 it is not required to be.
 
-**Resolution**: the fbm scene keeps the rounding-level gate; the ramp scene
-keeps `max` as a diagnostic and gates `rms <= 1e-3 · range`, which covers any
-single lost deposit on this scene (worst case `rms 3.49e-4`, i.e.
+**Resolution (run 2)**: the fbm scene kept the rounding-level gate and the ramp
+scene kept `max` as a diagnostic and gated `rms <= 1e-3 · range`, which covers
+any single lost deposit on this scene (worst case `rms 3.49e-4`, i.e.
 `4.66e-4 · range`) with ~2x headroom, while the draw-order bug that this case
 was designed to catch measured `rms/range 5.8e-3` and still fails by ~6x.
 Option (a), de-tying the scene, was rejected: there are no exact ties to
 remove, the direction is already fractional, and de-tying would not remove the
 landing-cell collisions that make the oracle undefined.
+
+Run 3 then moved the loss to the fbm scene after an oracle rebuild, so that
+split is superseded: both one-per-cell scenes now gate only on the
+distribution, and the exact per-cell claim moved to the collision-free
+single-particle trail case (see "Particle one-per-cell redesign" below).
 
 ### First run (2026-11-07, tree `e349bec1`, pre-fix)
 
@@ -374,19 +386,21 @@ transposed cells must stay untouched.
 Consequences: the GCC-built desktop CPU result changes, the clang/Emscripten
 result does not (verified: the golden `advection-particle-seed11` digest is
 unchanged and was not recaptured). The post-fix parity numbers are the run-2
-tables above; the mutation check remains `TODO(next-run)`.
+tables above; run 3 started the mutation check (see "Mutation check").
 
 ## Bounds and calibration
 
 Bounds, as frozen by the first oracle run (2026-11-07, tree `e349bec1`) and
-revised by the second run (2026-11-07, tree `592074466`):
+revised by the second run (2026-11-07, tree `592074466`); the particle
+one-per-cell rows were redesigned after the third run (2026-11-08, tree
+`a66929a77`):
 
 | case | gate | state |
 |---|---|---|
 | rifts | `rms <= 2.5e-2 · range`, `p99 <= 1e-1 · range`, `frac_over(1e-2) <= 0.4`; max diagnostic | **recalibrated** in run 1, run 2 worst `rms/range` 1.04e-2 |
 | warp (direct kernel) | `rms <= 1e-3 · range`, `p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`; max diagnostic | unchanged, run 2 measured `max <= 3.3e-7` |
-| particle, one particle per cell, fbm | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | frozen; run 2 measured `5.96e-8 / 3.39e-9` |
-| particle, one particle per cell, ramp | `rms <= 1e-3 · range`; max diagnostic | split from fbm in run 2: the oracle may lose one deposit (see above) |
+| particle, one particle per cell (fbm and ramp) | `rms <= 5e-3 · range`; max diagnostic | **redesigned** after run 3: the oracle's loss pattern is per-binary; run 3 measured fbm `max 0.0444` / `rms 1.39e-3`, ramp `max 5.96e-8` / `rms 1.86e-9` |
+| particle, single-particle trail (fbm and ramp) | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | new collision-free exact case: one particle, one writer per cell |
 | particle, many particles | `rel_total_pct <= 5`, `mean_abs <= 1e-2 · range`; per-cell metrics diagnostic | **frozen at the design values**, run 2 measured `0 / 0` on every scene |
 
 ### Rifts recalibration
@@ -413,22 +427,27 @@ The new bounds carry ~2x headroom over the worst measured value:
 `max_abs` stays an ungated diagnostic (a single flipped cell sets it and it is
 unbounded by construction).
 
-### Particle gate split
+### Particle one-per-cell redesign
 
 The one-particle-per-cell case was designed as an exactly-solvable per-cell
-comparison, and it is exactly that on fbm. On the ramp the oracle loses a
-single deposit at a collision cell, which is permitted by the kernel's
-non-atomic `out`/`count` updates (gap 7). The split above keeps the tight
-rounding-level gate where the oracle is well defined and bounds the ramp by
-what the oracle may legally lose: `rms <= 1e-3 · range` gives ~2.1x headroom
-over the worst single lost deposit on this scene (`rms 3.49e-4`, ratio
-`4.66e-4`), and the draw-order class of bug (run 1 measured `rms/range 5.8e-3`)
-still fails by ~6x. `max` is diagnostic on the ramp because a lost deposit can move
-it up to `1.12e-2`, close to the draw-order bug's `1.64e-2`, so it has almost
-no discriminating power there. The fbm row keeps the tight gate because it
-measured no loss in either run; the same non-atomic caveat applies in
-principle, and a future fbm loss would be re-evaluated the same way rather than
-being treated as a port regression without evidence.
+comparison, and run 2 measured it at rounding level on fbm with a single lost
+deposit on the ramp. Run 3 (mutation check, tree `a66929a77`) rebuilt the
+oracle and inverted the picture: fbm measured `max 0.0444` / `rms 1.39e-3`
+(~22 lost deposits at hot cells) while the ramp measured `max 5.96e-8` /
+`rms 1.86e-9`, i.e. no loss at all. PoCl is deterministic per binary
+(`gpu_repeat` was 0 within each run), but the loss pattern follows work-item
+scheduling and binary layout, so neither scene can carry a per-cell exactness
+claim across rebuilds.
+
+Both scenes now gate only on the distribution, `rms <= 5e-3 · range`, with
+`max` as a diagnostic. The bound has ~3.6x headroom over the worst observed
+`1.39e-3` and stays ~7.6x below the draw-order bug's `0.0378`, so a real
+walk/formula regression still fails loudly. The exact per-cell claim moved to
+`ParticleSingleParticleTrail`: one particle, 32² fbm and ramp scenes,
+`advection_length = 0.3` (a long, multi-cell walk), `post_filter = false`, and
+the same direct-kernel reference. A single particle has one writer per cell, so
+the oracle has no collision losses and CPU/GPU must agree at rounding level;
+that case keeps `max <= 1e-5 · range` and `rms <= 2e-6 · range`.
 
 ### Aggregate gate freeze
 
@@ -442,31 +461,36 @@ draw-order level (`0.63%` and `0.0303`). No re-freeze is pending: the design
 values are the frozen values.
 
 Calibration rule: one deliberate mutation per algorithm must break its gate —
-a rifts hash or smoothing constant (for example
-`43758.5453123f → 43758.5f`), the warp persistence factor or the
-downhill/uphill sign in its z-driven gradient, and the particle persistence or
-step sign. Each mutation is applied once, measured, recorded below, and
+a rifts hash input constant (for example the first `dot` coefficient
+`127.1f → 227.1f`; the scalar `43758.5453123f → 43758.5f` perturbation is below
+the sin-hash noise floor, see "Mutation check"), the warp persistence factor or
+the downhill/uphill sign in its z-driven gradient, and the particle persistence
+or step sign. Each mutation is applied once, measured, recorded below, and
 reverted. Do not loosen a bound without the measured numbers and a mutation
 check justifying it.
 
-`TODO(next-run): re-run the mutation check against the recalibrated rifts
-bounds and the post-fix particle numbers.` The post-fix PARITY / PARITY_AGG
-tables are filled in "Measured agreement"; only the mutation measurements
-remain.
+`Run 3 (2026-11-08, tree a66929a77)` started the mutation check against the
+recalibrated rifts bounds and the post-fix particle implementation. The first
+rifts mutation passed (it was undetectable) and is replaced by a stronger one;
+the remaining mutations are `TODO`. The post-fix PARITY / PARITY_AGG tables are
+filled in "Measured agreement".
 
 ### Mutation check
 
-`TODO(next-run)` — the mutation run is repeated against the recalibrated rifts
-bounds, the split one-per-cell gates, and the post-fix particle implementation.
+Run 3 applied the first rifts mutation to the recalibrated bounds. It was
+undetectable and is replaced by an O(1) hash-input mutation. The remaining rows
+are `TODO` for the warp and particle cycles and the final green run.
 
 | mutation | measured failure | bound | result |
 |---|---|---|---|
-| rifts hash `43758.5453123f → 43758.5f` | TODO(next-run) | `2.5e-2` / `1e-1` / `0.4` | TODO(next-run) |
+| rifts hash `43758.5453123f → 43758.5f` (run 3, tree `a66929a77`) | none — `RiftsAdvectionParity.Rifts` passed with near-unchanged metrics; the ≤4.5% hash-product perturbation stays below the calibrated sin-hash noise floor | `2.5e-2` / `1e-1` / `0.4` | **undetected** (by design of the noise floor); replaced by the dot-constant mutation below |
+| rifts first dot constant `127.1f → 227.1f` | TODO(next-run) | `2.5e-2` / `1e-1` / `0.4` | TODO(next-run) |
 | warp persistence `value_persistence` factor | TODO(next-run) | `1e-3` / `1e-2` / `1e-2` | TODO(next-run) |
 | warp z-driven gradient sign (uphill → downhill) | TODO(next-run) | `1e-3` / `1e-2` / `1e-2` | TODO(next-run) |
 | particle persistence `value_persistence` | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
 | particle step sign (`advection_sign`) | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
-| particle start-position draw order (x ↔ y) | first run: `one_per_cell` fbm max 0.1816 / rms 0.0378, ramp max 0.0164 / rms 0.0043; `mean_abs` 0.0303 vs gate 1e-2 · range | fbm `1e-5` / `2e-6`; ramp rms `1e-3 · range` with max diagnostic; `1e-2 · range` | **caught** (the first run *was* this mutation; fixed, pinned by `ParticleStartDrawOrder`; the split ramp gate still fails this class by ~6x) |
+| particle start-position draw order (x ↔ y) | first run: `one_per_cell` fbm max 0.1816 / rms 0.0378, ramp max 0.0164 / rms 0.0043; `mean_abs` 0.0303 vs gate 1e-2 · range | one-per-cell `rms <= 5e-3 · range`; single-trail `1e-5` / `2e-6`; aggregate `1e-2 · range` | **caught** (the first run *was* this mutation; fixed, pinned by `ParticleStartDrawOrder`; the one-per-cell rms gate still fails this class by ~7.6x) |
+| scheduling sensitivity (run 3, no mutation) | rebuilt PoCl oracle moved the one-per-cell loss pattern: fbm `max 0.0444` / `rms 1.39e-3` (~22 lost deposits), ramp `max 5.96e-8` / `rms 1.86e-9`; run 2 had been bit-exact on fbm and lost one deposit on the ramp | old fbm `1e-5` / `2e-6`; old ramp `rms 1e-3 · range` | **gate redesign**: one-per-cell scenes now gate `rms <= 5e-3 · range` (max diagnostic); exact per-cell gate moved to the collision-free `ParticleSingleParticleTrail` case, as implemented in this change |
 
 ## Known oracle gaps
 
@@ -528,9 +552,11 @@ bounds, the split one-per-cell gates, and the post-fix particle implementation.
    run 2's `max 1.996e-3` / `rms 6.24e-5` is exactly one lost deposit at a
    three-way collision cell (run 2 measured 267 collision cells; a local Intel
    OpenCL run of the same kernel loses most of them, collapsing `count` to 1).
-   This is device-defined kernel behaviour, not a port divergence; the ramp
-   `rms` gate tolerates it and the fbm scene, where no loss was measured, keeps
-   the rounding-level gate (see "Particle one-per-cell ramp").
+   This is device-defined kernel behaviour, not a port divergence. Across runs
+   2 and 3 the one-per-cell loss moved from the ramp (one deposit) to fbm
+   (~22 deposits) after an oracle rebuild, so both scenes now gate only on
+   `rms` (see "Particle one-per-cell redesign"); the exact per-cell gate is
+   reserved for the collision-free single-particle trail case.
 8. **Rifts hash discontinuity.** The Voronoi hash is
    `fract(sin(dot(p, k) + fseed) * 43758.5453123)`. A one-ULP difference in
    `sin` can flip a whole Voronoi cell, so a pointwise maximum is meaningless

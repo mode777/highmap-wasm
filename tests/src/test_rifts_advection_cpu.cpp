@@ -707,10 +707,11 @@ void print_pct_line(const char       *variant,
   testing::Test::RecordProperty(key + ".threshold", fmt(threshold));
 }
 
-// Per-cell comparison for cases whose arithmetic must match cell by cell
-// (one particle per cell). `gate_max` is false only for the ramp scene, where
-// the oracle's non-atomic accumulation makes a whole-deposit loss a valid
-// outcome (see the comment at the ParticleOnePerCell call site).
+// Per-cell comparison for cases whose arithmetic must match cell by cell.
+// `gate_max` is false for the collision-heavy one-per-cell scenes, where the
+// oracle's non-atomic accumulation makes a whole-deposit loss a valid outcome;
+// the collision-free single-particle trail keeps the exact per-cell gate (see
+// the comments at those call sites).
 void expect_parity_cells(const char   *variant,
                          const char   *scene,
                          int           iterations,
@@ -2540,46 +2541,33 @@ TEST_F(RiftsAdvectionParity, ParticleOnePerCell)
 {
   // The port walks particles in ascending id order (design D5), while the
   // kernel accumulates `out[...] += val` and `count[idx] += 1.f` without
-  // atomics. On a collision cell the oracle may therefore lose a whole
-  // deposit; that is undefined kernel behaviour, not a port divergence.
-  //
-  // fbm has no measured collision loss: max 5.96e-8 / rms 3.39e-9 (run 2,
-  // tree 592074466), so it keeps the rounding-level gate. The ramp measured a
-  // single lost deposit (rms = max / sqrt(1024) exactly, i.e. one cell):
-  // max 1.996e-3 / rms 6.24e-5. The CPU replay and the wasm build are
-  // bit-identical, no start/landing coordinate is within 1e-5 of a cell
-  // boundary, and direction perturbations do not reproduce the one-cell
-  // profile - so this is not a boundary tie. A local Intel OpenCL run of the
-  // same kernel loses most collision-cell updates (counts collapse to 1),
-  // confirming the non-atomic accumulation is device-undefined.
-  //
-  // For the ramp, max stays a diagnostic and rms is gated to cover any single
-  // lost deposit (worst case on this scene: max 1.12e-2 / rms 3.49e-4, i.e.
-  // rms/range 4.66e-4) with ~2x headroom, while the draw-order bug that this
-  // case caught in run 1 measured rms/range 5.8e-3 and still fails by ~6x.
+  // atomics. On a collision cell the oracle may therefore lose whole deposits;
+  // that is undefined kernel behaviour, not a port divergence. Per-cell
+  // exactness is unverifiable on such scenes, and PoCl is only deterministic
+  // per binary: run 3 (mutation check, tree a66929a77, rebuilt oracle) measured
+  // fbm max 0.0444 / rms 1.39e-3, i.e. ~22 lost deposits at hot cells, while
+  // run 2 had been bit-exact on the same source and run 3's ramp measured max
+  // 5.96e-8 / rms 1.86e-9 because its scheduling happened to avoid every loss.
+  // The loss pattern shifts with work-item scheduling and binary layout, so
+  // both scenes are gated on the distribution only: `rms <= 5e-3 * range`
+  // carries ~3.6x headroom over the worst observed 1.39e-3 and stays ~7.6x
+  // below the draw-order bug's 0.0378, so a real walk/formula bug still fails
+  // loudly. max stays a diagnostic; the collision-free exact claim lives in
+  // ParticleSingleParticleTrail.
   struct SceneCase
   {
     const char *name;
     Array (*terrain)();
     Array (*field)();
-    float max_ratio;
-    float rms_ratio;
-    bool  gate_max;
   };
 
   const SceneCase scenes[] = {
       {"fbm",
        []() { return scene_fbm(32); },
-       []() { return scene_fbm(32, 12); },
-       1e-5f, // max: rounding level (measured 5.96e-8)
-       2e-6f, // rms: rounding level (measured 3.39e-9)
-       true},
+       []() { return scene_fbm(32, 12); }},
       {"ramp",
        []() { return scene_ramp(32); },
-       []() { return scene_ramp_field(32); },
-       0.f,   // max: diagnostic only, see above
-       1e-3f, // rms: any single lost deposit with ~2x headroom
-       false},
+       []() { return scene_ramp_field(32); }},
   };
 
   for (const auto &scene : scenes)
@@ -2626,9 +2614,79 @@ TEST_F(RiftsAdvectionParity, ParticleOnePerCell)
                         cpu,
                         gpu,
                         array_range(field),
-                        scene.max_ratio,
-                        scene.rms_ratio,
-                        scene.gate_max,
+                        0.f,    // max: diagnostic only
+                        5e-3f,  // rms: distribution gate
+                        false,
+                        true);
+  }
+}
+
+TEST_F(RiftsAdvectionParity, ParticleSingleParticleTrail)
+{
+  // Single-particle accumulation has no races: one work-item owns every
+  // `out += val` / `count += 1` write, so the PoCl oracle is deterministic and
+  // CPU and GPU must agree to rounding level, like warp. A long walk
+  // (advection_length 0.3 => dist_max = 9.6 steps on a 32x32 grid) exercises a
+  // multi-cell trail; post_filter is off and the direct-kernel reference is the
+  // same helper used by the other particle cases.
+  struct SceneCase
+  {
+    const char *name;
+    Array (*terrain)();
+    Array (*field)();
+  };
+
+  const SceneCase scenes[] = {
+      {"fbm",
+       []() { return scene_fbm(32); },
+       []() { return scene_fbm(32, 12); }},
+      {"ramp",
+       []() { return scene_ramp(32); },
+       []() { return scene_ramp_field(32); }},
+  };
+
+  for (const auto &scene : scenes)
+  {
+    const Array z = scene.terrain();
+    const Array field = scene.field();
+    const Array dx = -gradient_x(z); // downhill, as in the wrapper
+    const Array dy = -gradient_y(z);
+
+    const Array cpu = advection_particle(dx,
+                                         dy,
+                                         field,
+                                         1, // one particle: no collisions
+                                         11u,
+                                         false,
+                                         false,
+                                         0.125f,
+                                         0.3f, // long walk
+                                         0.99f,
+                                         0.f);
+
+    const Array gpu = gpu_particle_reference(dx,
+                                             dy,
+                                             field,
+                                             1,
+                                             11u,
+                                             false,
+                                             false,
+                                             0.125f,
+                                             0.3f,
+                                             0.99f,
+                                             0.f,
+                                             nullptr,
+                                             nullptr);
+
+    expect_parity_cells("advection_particle_single_trail",
+                        scene.name,
+                        1,
+                        cpu,
+                        gpu,
+                        array_range(field),
+                        1e-5f, // max: rounding level
+                        2e-6f, // rms: rounding level
+                        true,
                         true);
   }
 }
