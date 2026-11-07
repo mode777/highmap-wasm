@@ -42,7 +42,8 @@ decision record is AD-028 in `docs/decisions.md`.
 - **Scenes**: seeded Perlin fBm 32² (remapped to [0, 1]), a synthetic ramp
   32², one fBm 64² for the rifts neighbourhood, and a second seeded fBm / a
   cross-oriented ramp as the advected field. Particle aggregates use
-  `nparticles = 1000`; the per-cell case uses one particle per cell (1024).
+  `nparticles = 1000`; the per-cell case uses one particle per cell (1024), so
+  landing cells can still collide (see gap 7).
 - **Gate**: every non-diagnostic case must stay under its bound, and a
   *skipped* case fails the job except for the recorded float-image-format
   limitation. `tests/src/main.cpp` calls `gpu::init_opencl()` before gtest and
@@ -108,21 +109,163 @@ through this suite instead of skipping it.
 
 ## Measured agreement
 
-### First run (2026-11-07, tree `e349bec1`)
+Two oracle runs are recorded. The **first run** (2026-11-07, tree `e349bec1`)
+exposed the particle draw-order bug and the rifts hash-flip distribution; the
+**second run** (2026-11-07, tree `592074466`) repeated every suite after the
+draw-order fix. The only port change between the runs was the draw-order fix
+(`draw_start_pos()` in `advection_cpu.cpp`); the test gained the
+`ParticleStartDrawOrder` invariant. The run-2 numbers are the frozen
+reference; the run-1 tables are kept because they justify the rifts
+recalibration and the particle root cause.
 
-The first full oracle run reported, in this order: **warp perfect**,
-**rifts a hash-flip signature that needs gate recalibration**, and
-**particle a real divergence**. The sections below record those numbers, the
-rifts recalibration they justify, and the particle root cause they exposed.
-The post-fix particle numbers are `TODO(next-run)`.
+### Second run (2026-11-07, tree `592074466`, post-fix)
+
+The draw-order fix removed the entire fbm particle divergence: the per-cell fbm
+case moved from `max 0.1816 / rms 0.0378` to rounding level
+(`5.96e-8 / 3.39e-9`), and every aggregate scene became bit-identical. The
+warp cases are unchanged at rounding level, and rifts stays inside the run-1
+recalibrated bounds. One case came in outside its then-current tight gate: the
+ramp one-particle-per-cell scene, where the oracle loses exactly one deposit
+because the kernel accumulates without atomics. That is an oracle limitation of
+the synthetic scene, not a port divergence; the evidence and the resulting gate
+split are in "Particle one-per-cell ramp" below.
+
+#### Warp (run 2)
+
+`max` / `rms` are absolute; the gate is `rms <= 1e-3 · range`,
+`p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`, with `range` 0.99999994 on
+fbm and 0.74999994 on the ramp. All 22 variants pass with several orders of
+magnitude of margin; 6 of them are bit-identical.
+
+| variant | fbm max / rms | ramp max / rms |
+|---|---|---|
+| `l010_p0500` | 0 / 0 | 0 / 0 |
+| `l010_p0960` | 0 / 0 | 0 / 0 |
+| `l010_p1000` | 0 / 0 | 0 / 0 |
+| `l050_p0500` | 1.19e-7 / 2.20e-8 | 1.19e-7 / 2.27e-8 |
+| `l050_p0960` | 1.19e-7 / 2.94e-8 | 1.19e-7 / 3.06e-8 |
+| `l050_p1000` | 1.19e-7 / 3.05e-8 | 1.19e-7 / 3.14e-8 |
+| `l100_p0500` | 1.19e-7 / 1.96e-8 | 1.19e-7 / 1.98e-8 |
+| `l100_p0960` | 3.28e-7 / 3.28e-8 | 1.19e-7 / 2.77e-8 |
+| `l100_p1000` | 3.28e-7 / 3.44e-8 | 1.19e-7 / 2.84e-8 |
+| `advection_warp_supplied_mask` | 1.79e-7 / 2.07e-8 | — |
+| `advection_warp_constant_velocity` | — | 1.19e-7 / 2.18e-8 |
+
+The ungated flat-start diagnostic is unchanged (`max 0.4497 / rms 0.1515` on
+the fbm field) and still records the kernel's uninitialized `dir` deviation
+(gap 4).
+
+#### Rifts (run 2)
+
+Values are `abs / range` (rms, p99), except `max` which is absolute and
+diagnostic only. `range` is 1 on the fbm/fbm64 scenes and 0.700000048 on the
+ramp.
+
+| variant | scene | max (diag) | rms / range | p99 / range | frac_over | result |
+|---|---|---|---|---|---|---|
+| `rifts_a0_amp005` | fbm | 5.65e-3 | 9.05e-4 | 4.24e-3 | 0 | passed |
+| `rifts_a90_amp02` | fbm | 4.56e-2 | 4.60e-3 | 2.28e-2 | 0.0439 | passed |
+| `rifts_a0_amp02` | ramp | 4.45e-2 | 1.08e-2 | 4.98e-2 | 0.1338 | passed |
+| `rifts_a90_amp005` | ramp | 1.11e-2 | 2.63e-3 | 1.05e-2 | 0.0166 | passed |
+| `rifts_64_neighborhood` | fbm64 | 1.54e-2 | 1.85e-3 | 8.85e-3 | 0.00659 | passed |
+| `rifts_supplied_mask` | fbm | 3.63e-3 | 4.49e-4 | 2.43e-3 | 0 | passed |
+| `rifts_noise_offsets` | fbm | 6.30e-2 | 1.04e-2 | 4.31e-2 | 0.1934 | passed |
+
+The worst case is `rifts_noise_offsets` at `rms/range 1.04e-2` against the
+`2.5e-2` bound (2.4x headroom); every frac_over is below 0.194 against the
+0.4 bound.
+
+#### Particle (run 2)
+
+`PARITY` / `PARITY_AGG` values. `rel_total_pct` is percent, `mean_abs` and the
+per-cell max/rms are absolute. The one-per-cell rows use the per-cell gate; the
+aggregate rows gate only `rel_total_pct` and `mean_abs`, with the per-cell
+columns diagnostic.
+
+| variant | scene | iters | max (diag) | rms (diag) | rel_total_pct | mean_abs | range |
+|---|---|---|---|---|---|---|---|
+| `advection_particle_one_per_cell` | fbm | 1 | 5.96e-8 | 3.39e-9 | n/a (cell gate) | n/a | 0.99999994 |
+| `advection_particle_one_per_cell` | ramp | 1 | 1.996e-3 | 6.24e-5 | n/a (cell gate) | n/a | 0.74999994 |
+| `particle_agg_iter1` | fbm | 1 | 0 | 0 | 0 | 0 | 0.99999994 |
+| `particle_agg_iter2` | fbm | 2 | 0 | 0 | 0 | 0 | 0.99999994 |
+| `particle_agg_reverse` | fbm | 1 | 0 | 0 | 0 | 0 | 0.99999994 |
+| `particle_agg_inertia02` | fbm | 1 | 0 | 0 | 0 | 0 | 0.99999994 |
+| `particle_agg_iter1` | ramp | 1 | 0 | 0 | 0 | 0 | 0.74999994 |
+| `particle_agg_iter2` | ramp | 2 | 0 | 0 | 0 | 0 | 0.74999994 |
+| `particle_agg_reverse` | ramp | 1 | 0 | 0 | 0 | 0 | 0.74999994 |
+| `particle_agg_inertia02` | ramp | 1 | 0 | 0 | 0 | 0 | 0.74999994 |
+| `advection_particle_gpu_repeat` (ungated) | fbm | 1 | 0 | 0 | 0 | 0 | 0.99999994 |
+
+The fbm one-per-cell row is rounding level (`max` one ULP, `rms` far below it).
+The ramp row is the only non-zero metric of the whole post-fix advection
+family, and its profile (`rms = max / sqrt(1024)` exactly) says one cell
+differs. The aggregate rows are `0` on both sides of every metric, including
+the GPU-vs-GPU repeat: PoCL schedules the non-atomic accumulation
+deterministically here, and its order matches the port's ascending-id order.
+
+#### Particle one-per-cell ramp — verified oracle limitation
+
+The ramp direction is not axis-aligned: `dx/dy = -gradient_x/y(scene_ramp)`
+gives a constant interior `dir ≈ (-0.9864, -0.1644)`, so `pos += dir` moves in
+fractional steps. A float-exact replay of the port (bit-identical to the
+`dist/` wasm build, 0/1024 cells) was used to test the boundary-tie hypothesis:
+
+- no start or landing coordinate is within `1e-5` of an integer cell boundary
+  (`(int)pos` cannot tie);
+- a 1-ULP perturbation of every landing changes nothing; a uniform relative
+  perturbation of `dir` from `-3e-3` to `+3e-3` in `1e-6` steps produces either
+  no cell difference or at least two differing cells, never the observed
+  single-cell profile;
+- GCC `-Ofast -ffast-math` (the CI desktop build) and clang fast-math replays,
+  with and without FMA, change only the last bits of the walk
+  (`max <= 1.2e-7`) and never move a landing.
+
+The actual signature is a lost deposit in the oracle's accumulation. The scene
+has 1024 particles but only 634 distinct landing cells; 267 cells receive more
+than one particle (up to 6). The fbm scene has the same kind of collisions (586
+distinct landing cells, 273 collision cells, up to 7) yet measured no loss,
+which points at the oracle's work-item scheduling rather than the scene's
+collision count. `advection_particle.cl:109-111` does
+`out[...] += val` and `count[idx] += 1.f` without atomics, so a collision cell
+may lose a whole update. The run-2 profile is exactly that: losing one deposit
+at a three-way collision cell reproduces `max 0.00199598074` and
+`rms 6.23743981e-5` exactly, and there are 22 such particle/cell
+possibilities (11 cells, all with three colliding particles); no boundary or
+count-one cell can produce this magnitude on the linear ramp. The CPU replay's
+sequential ascending-id accumulation is the documented defined behaviour
+(design D5), so there is nothing to fix in the port.
+
+Independent confirmation: running the same kernel source with the same
+`-cl-fast-relaxed-math` options on a local Intel OpenCL GPU collapses the
+collision-cell counts from 2-6 to 1 and produces `max 0.29` — the kernel's
+non-atomic accumulation is device-undefined, exactly as gap 7 says. PoCL's CPU
+device is much better behaved (one lost deposit instead of most of them), but
+it is not required to be.
+
+**Resolution**: the fbm scene keeps the rounding-level gate; the ramp scene
+keeps `max` as a diagnostic and gates `rms <= 1e-3 · range`, which covers any
+single lost deposit on this scene (worst case `rms 3.49e-4`, i.e.
+`4.66e-4 · range`) with ~2x headroom, while the draw-order bug that this case
+was designed to catch measured `rms/range 5.8e-3` and still fails by ~6x.
+Option (a), de-tying the scene, was rejected: there are no exact ties to
+remove, the direction is already fractional, and de-tying would not remove the
+landing-cell collisions that make the oracle undefined.
+
+### First run (2026-11-07, tree `e349bec1`, pre-fix)
+
+The first full oracle run reported, in this order: **warp perfect**, **rifts a
+hash-flip signature that needed gate recalibration**, and **particle a real
+divergence**. The sections below record those numbers and the rifts
+recalibration they justify; the particle root cause follows the run-1 table.
 
 Warp, all 20 gated warp variants (`0.01/0.05/0.1 × 0.5/0.96/1.0` on fbm and
 ramp, plus the supplied-mask and constant-velocity cases): `max_abs <= 3.3e-7`
 on every scene, i.e. rounding level, several orders of magnitude inside the
-`rms <= 1e-3 · range` gate. Per-variant rows are `TODO(next-run)`; nothing was
-changed on the warp side.
+`rms <= 1e-3 · range` gate. Nothing was changed on the warp side; run 2
+supersedes these numbers with the per-variant table above.
 
-### `PARITY` / `PARITY_PCT` — rifts
+
+### `PARITY` / `PARITY_PCT` — rifts (run 1)
 
 Values are normalized by `range` (rms and p99 are `abs / range`, so the table
 is comparable across scenes). `range` is ~1 for the fbm and fbm64 scenes and
@@ -161,8 +304,8 @@ Both one-per-cell rows failed their gate (`max <= 1e-5 · range`,
 failed `mean_abs <= 1e-2 · range` (0.0303 / 0.0419 / 0.0294 / 0.0319 against
 0.01), while the ramp aggregate row passed both (0.0042 against 0.0075). The
 ramp scene was 9x better than fbm, and the GPU-vs-GPU repeat was bit-identical,
-i.e. the oracle is deterministic and races do not explain the difference - so
-this was a real walk-level divergence, not accumulation noise.
+so the first-run difference was not accumulation noise - it was the draw-order
+divergence documented next.
 
 ### Particle draw order — root cause of the first-run divergence
 
@@ -230,19 +373,21 @@ transposed cells must stay untouched.
 
 Consequences: the GCC-built desktop CPU result changes, the clang/Emscripten
 result does not (verified: the golden `advection-particle-seed11` digest is
-unchanged and was not recaptured). The post-fix parity numbers and the mutation
-check remain `TODO(next-run)`.
+unchanged and was not recaptured). The post-fix parity numbers are the run-2
+tables above; the mutation check remains `TODO(next-run)`.
 
 ## Bounds and calibration
 
-Bounds, as frozen by the first oracle run (2026-11-07, tree `e349bec1`):
+Bounds, as frozen by the first oracle run (2026-11-07, tree `e349bec1`) and
+revised by the second run (2026-11-07, tree `592074466`):
 
 | case | gate | state |
 |---|---|---|
-| rifts | `rms <= 2.5e-2 · range`, `p99 <= 1e-1 · range`, `frac_over(1e-2) <= 0.4`; max diagnostic | **recalibrated**, see below |
-| warp (direct kernel) | `rms <= 1e-3 · range`, `p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`; max diagnostic | unchanged, run measured `max <= 3.3e-7` |
-| particle, one particle per cell | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | unchanged and expected to pass after the draw-order fix |
-| particle, many particles | `rel_total_pct <= 5`, `mean_abs <= 1e-2 · range`; per-cell metrics diagnostic | `rel_total` kept, `mean_abs` re-freeze `TODO(next-run)` |
+| rifts | `rms <= 2.5e-2 · range`, `p99 <= 1e-1 · range`, `frac_over(1e-2) <= 0.4`; max diagnostic | **recalibrated** in run 1, run 2 worst `rms/range` 1.04e-2 |
+| warp (direct kernel) | `rms <= 1e-3 · range`, `p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`; max diagnostic | unchanged, run 2 measured `max <= 3.3e-7` |
+| particle, one particle per cell, fbm | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | frozen; run 2 measured `5.96e-8 / 3.39e-9` |
+| particle, one particle per cell, ramp | `rms <= 1e-3 · range`; max diagnostic | split from fbm in run 2: the oracle may lose one deposit (see above) |
+| particle, many particles | `rel_total_pct <= 5`, `mean_abs <= 1e-2 · range`; per-cell metrics diagnostic | **frozen at the design values**, run 2 measured `0 / 0` on every scene |
 
 ### Rifts recalibration
 
@@ -268,11 +413,33 @@ The new bounds carry ~2x headroom over the worst measured value:
 `max_abs` stays an ungated diagnostic (a single flipped cell sets it and it is
 unbounded by construction).
 
-Constraint on any future loosening: the aggregate gate `mean_abs <= 1e-2 ·
-range` for the particle is kept at its provisional value on purpose - it failed
-at the pre-fix level (0.029-0.042 measured) and must be re-frozen from the
-post-fix numbers, which are expected at rounding level. Do not relax it before
-that run.
+### Particle gate split
+
+The one-particle-per-cell case was designed as an exactly-solvable per-cell
+comparison, and it is exactly that on fbm. On the ramp the oracle loses a
+single deposit at a collision cell, which is permitted by the kernel's
+non-atomic `out`/`count` updates (gap 7). The split above keeps the tight
+rounding-level gate where the oracle is well defined and bounds the ramp by
+what the oracle may legally lose: `rms <= 1e-3 · range` gives ~2.1x headroom
+over the worst single lost deposit on this scene (`rms 3.49e-4`, ratio
+`4.66e-4`), and the draw-order class of bug (run 1 measured `rms/range 5.8e-3`)
+still fails by ~6x. `max` is diagnostic on the ramp because a lost deposit can move
+it up to `1.12e-2`, close to the draw-order bug's `1.64e-2`, so it has almost
+no discriminating power there. The fbm row keeps the tight gate because it
+measured no loss in either run; the same non-atomic caveat applies in
+principle, and a future fbm loss would be re-evaluated the same way rather than
+being treated as a port regression without evidence.
+
+### Aggregate gate freeze
+
+Run 2 measured `rel_total_pct = 0` and `mean_abs = 0` on every aggregate scene
+(both terrains, all four variants) and on `advection_particle_gpu_repeat`. The
+gates stay at the design values (`rel_total_pct <= 5`, `mean_abs <= 1e-2 ·
+range`) as conservative regression bounds. They are deliberately far above the
+measured rounding level because the kernel's non-atomic accumulation makes the
+exact many-particle result device-dependent, and they still catch the pre-fix
+draw-order level (`0.63%` and `0.0303`). No re-freeze is pending: the design
+values are the frozen values.
 
 Calibration rule: one deliberate mutation per algorithm must break its gate —
 a rifts hash or smoothing constant (for example
@@ -283,13 +450,14 @@ reverted. Do not loosen a bound without the measured numbers and a mutation
 check justifying it.
 
 `TODO(next-run): re-run the mutation check against the recalibrated rifts
-bounds and the post-fix particle numbers, and fill the post-fix particle
-PARITY / PARITY_AGG table in "Measured agreement".`
+bounds and the post-fix particle numbers.` The post-fix PARITY / PARITY_AGG
+tables are filled in "Measured agreement"; only the mutation measurements
+remain.
 
 ### Mutation check
 
 `TODO(next-run)` — the mutation run is repeated against the recalibrated rifts
-bounds and the post-fix particle implementation.
+bounds, the split one-per-cell gates, and the post-fix particle implementation.
 
 | mutation | measured failure | bound | result |
 |---|---|---|---|
@@ -298,7 +466,7 @@ bounds and the post-fix particle implementation.
 | warp z-driven gradient sign (uphill → downhill) | TODO(next-run) | `1e-3` / `1e-2` / `1e-2` | TODO(next-run) |
 | particle persistence `value_persistence` | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
 | particle step sign (`advection_sign`) | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
-| particle start-position draw order (x ↔ y) | first run: `one_per_cell` fbm max 0.1816 / rms 0.0378, ramp max 0.0164 / rms 0.0043; `mean_abs` 0.0303 vs gate 1e-2 · range | `1e-5` / `2e-6` and `1e-2 · range` | **caught** (the first run *was* this mutation; fixed, pinned by `ParticleStartDrawOrder`) |
+| particle start-position draw order (x ↔ y) | first run: `one_per_cell` fbm max 0.1816 / rms 0.0378, ramp max 0.0164 / rms 0.0043; `mean_abs` 0.0303 vs gate 1e-2 · range | fbm `1e-5` / `2e-6`; ramp rms `1e-3 · range` with max diagnostic; `1e-2 · range` | **caught** (the first run *was* this mutation; fixed, pinned by `ParticleStartDrawOrder`; the split ramp gate still fails this class by ~6x) |
 
 ## Known oracle gaps
 
@@ -354,9 +522,15 @@ bounds and the post-fix particle implementation.
    does not guarantee a reproducible many-particle result and the aggregate
    cases gate only on total mass and mean `|Δz|`;
    `advection_particle_gpu_repeat` records the GPU-vs-GPU spread. The first
-   oracle run measured that spread as exactly zero (PoCl schedules the
-   work-items deterministically here), which is what made the pre-fix
-   `mean_abs` failure a real divergence instead of accumulation noise.
+   oracle run measured that spread as exactly zero (PoCL schedules the
+   work-items deterministically here), and run 2 measured the same on every
+   aggregate scene. The one-particle-per-cell ramp scene still hit the race:
+   run 2's `max 1.996e-3` / `rms 6.24e-5` is exactly one lost deposit at a
+   three-way collision cell (run 2 measured 267 collision cells; a local Intel
+   OpenCL run of the same kernel loses most of them, collapsing `count` to 1).
+   This is device-defined kernel behaviour, not a port divergence; the ramp
+   `rms` gate tolerates it and the fbm scene, where no loss was measured, keeps
+   the rounding-level gate (see "Particle one-per-cell ramp").
 8. **Rifts hash discontinuity.** The Voronoi hash is
    `fract(sin(dot(p, k) + fseed) * 43758.5453123)`. A one-ULP difference in
    `sin` can flip a whole Voronoi cell, so a pointwise maximum is meaningless

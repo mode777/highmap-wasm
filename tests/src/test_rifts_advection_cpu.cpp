@@ -708,7 +708,9 @@ void print_pct_line(const char       *variant,
 }
 
 // Per-cell comparison for cases whose arithmetic must match cell by cell
-// (one particle per cell).
+// (one particle per cell). `gate_max` is false only for the ramp scene, where
+// the oracle's non-atomic accumulation makes a whole-deposit loss a valid
+// outcome (see the comment at the ParticleOnePerCell call site).
 void expect_parity_cells(const char   *variant,
                          const char   *scene,
                          int           iterations,
@@ -717,6 +719,7 @@ void expect_parity_cells(const char   *variant,
                          float         range,
                          float         max_ratio,
                          float         rms_ratio,
+                         bool          gate_max,
                          bool          gate)
 {
   const Metrics m = diff_metrics(cpu, gpu);
@@ -725,9 +728,10 @@ void expect_parity_cells(const char   *variant,
 
   if (!gate) return;
 
-  EXPECT_LE(m.max_abs, max_ratio * range)
-      << variant << "/" << scene << "/" << iterations
-      << ": max|cpu-gpu| = " << m.max_abs << " > " << max_ratio * range;
+  if (gate_max)
+    EXPECT_LE(m.max_abs, max_ratio * range)
+        << variant << "/" << scene << "/" << iterations
+        << ": max|cpu-gpu| = " << m.max_abs << " > " << max_ratio * range;
   EXPECT_LE(m.rms_abs, rms_ratio * range)
       << variant << "/" << scene << "/" << iterations
       << ": rms|cpu-gpu| = " << m.rms_abs << " > " << rms_ratio * range;
@@ -769,9 +773,9 @@ void expect_parity_distribution(const char  *variant,
 
 // Aggregate comparison for many-particle advection: the per-cell maps are
 // diagnostics only (non-atomic +=), the gates are total mass and mean |dz|.
-// The mean bound stays at 1e-2 * range until the next oracle run re-freezes it
-// from the post-fix numbers (it is expected to drop to the arithmetic level
-// together with the one-per-cell gate).
+// The gates stay at the design values as conservative regression bounds: run 2
+// measured rel_total_pct = 0 and mean_abs = 0 on every scene, but the kernel's
+// non-atomic accumulation remains device-dependent.
 void expect_parity_aggregate(const char  *variant,
                              const char  *scene,
                              int          iterations,
@@ -2534,20 +2538,48 @@ TEST_F(RiftsAdvectionParity, WarpFlatStartDiagnostic)
 
 TEST_F(RiftsAdvectionParity, ParticleOnePerCell)
 {
+  // The port walks particles in ascending id order (design D5), while the
+  // kernel accumulates `out[...] += val` and `count[idx] += 1.f` without
+  // atomics. On a collision cell the oracle may therefore lose a whole
+  // deposit; that is undefined kernel behaviour, not a port divergence.
+  //
+  // fbm has no measured collision loss: max 5.96e-8 / rms 3.39e-9 (run 2,
+  // tree 592074466), so it keeps the rounding-level gate. The ramp measured a
+  // single lost deposit (rms = max / sqrt(1024) exactly, i.e. one cell):
+  // max 1.996e-3 / rms 6.24e-5. The CPU replay and the wasm build are
+  // bit-identical, no start/landing coordinate is within 1e-5 of a cell
+  // boundary, and direction perturbations do not reproduce the one-cell
+  // profile - so this is not a boundary tie. A local Intel OpenCL run of the
+  // same kernel loses most collision-cell updates (counts collapse to 1),
+  // confirming the non-atomic accumulation is device-undefined.
+  //
+  // For the ramp, max stays a diagnostic and rms is gated to cover any single
+  // lost deposit (worst case on this scene: max 1.12e-2 / rms 3.49e-4, i.e.
+  // rms/range 4.66e-4) with ~2x headroom, while the draw-order bug that this
+  // case caught in run 1 measured rms/range 5.8e-3 and still fails by ~6x.
   struct SceneCase
   {
     const char *name;
     Array (*terrain)();
     Array (*field)();
+    float max_ratio;
+    float rms_ratio;
+    bool  gate_max;
   };
 
   const SceneCase scenes[] = {
       {"fbm",
        []() { return scene_fbm(32); },
-       []() { return scene_fbm(32, 12); }},
+       []() { return scene_fbm(32, 12); },
+       1e-5f, // max: rounding level (measured 5.96e-8)
+       2e-6f, // rms: rounding level (measured 3.39e-9)
+       true},
       {"ramp",
        []() { return scene_ramp(32); },
-       []() { return scene_ramp_field(32); }},
+       []() { return scene_ramp_field(32); },
+       0.f,   // max: diagnostic only, see above
+       1e-3f, // rms: any single lost deposit with ~2x headroom
+       false},
   };
 
   for (const auto &scene : scenes)
@@ -2594,9 +2626,9 @@ TEST_F(RiftsAdvectionParity, ParticleOnePerCell)
                         cpu,
                         gpu,
                         array_range(field),
-                        1e-5f, // max bound: rounding level, the GPU is
-                               // bit-repeatable (warp measured <= 3.3e-7)
-                        2e-6f, // rms bound, same rationale
+                        scene.max_ratio,
+                        scene.rms_ratio,
+                        scene.gate_max,
                         true);
   }
 }
