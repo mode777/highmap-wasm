@@ -262,6 +262,51 @@ export interface HighmapModule {
     velU: RawArray | null,
     velV: RawArray | null,
   ): void;
+
+  // rifts / advection family (CPU ports; rifts in place, advection new grids)
+  rifts(
+    z: RawArray,
+    kwX: number,
+    kwY: number,
+    angle: number,
+    amplitude: number,
+    seed: number,
+    elevationNoiseShift: number,
+    kSmoothBottom: number,
+    kSmoothTop: number,
+    radialSpreadAmp: number,
+    elevationNoiseAmp: number,
+    clampVmin: number,
+    remapVmin: number,
+    applyMask: boolean,
+    reverseMask: boolean,
+    maskGamma: number,
+    centerX: number,
+    centerY: number,
+    bboxXmin: number,
+    bboxXmax: number,
+    bboxYmin: number,
+    bboxYmax: number,
+  ): void;
+  advectionParticle(
+    z: RawArray,
+    field: RawArray,
+    iterations: number,
+    nparticles: number,
+    seed: number,
+    reverse: boolean,
+    postFilter: boolean,
+    postFilterSigma: number,
+    advectionLength: number,
+    valuePersistence: number,
+    inertia: number,
+  ): RawArray;
+  advectionWarp(
+    z: RawArray,
+    field: RawArray,
+    advectionLength: number,
+    valuePersistence: number,
+  ): RawArray;
 }
 
 export type HighmapFactory = (

@@ -102,6 +102,40 @@ const scenes = {
     );
     return t;
   },
+  "rifts-seed11": () => {
+    const t = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(t, 0, 1);
+    m.rifts(
+      t, 4, 1.2, 30, 0.1, 11,
+      0, 0.05, 0.05, 0.2, 0.1, 0, 0,
+      true, false, 1,
+      0.5, 0.5,
+      0, 1, 0, 1,
+    );
+    return t;
+  },
+  "advection-particle-seed11": () => {
+    const z = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(z, 0, 1);
+    const f = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 7, 8, 0.7, 0.5, 2);
+    m.remapValues(f, 0, 1);
+    const out = m.advectionParticle(
+      z, f, 1, 256, 11, false, true, 0.125, 0.1, 0.99, 0,
+    );
+    z.delete();
+    f.delete();
+    return out;
+  },
+  "advection-warp-seed11": () => {
+    const z = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 11, 8, 0.7, 0.5, 2);
+    m.remapValues(z, 0, 1);
+    const f = m.noiseFbm(m.NoiseType.SIMPLEX2S, 64, 64, 4, 2, 7, 8, 0.7, 0.5, 2);
+    m.remapValues(f, 0, 1);
+    const out = m.advectionWarp(z, f, 0.1, 0.9);
+    z.delete();
+    f.delete();
+    return out;
+  },
 };
 
 const out = {};

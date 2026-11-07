@@ -112,6 +112,31 @@ objects carrying the defaults listed above; the algebra layer's `add` /
 `subtract` / `multiply` / `divide` accept a grid **or** a number and dispatch
 to the scalar variants internally.
 
+### Rifts / advection family (CPU ports)
+
+The rifts and advection algorithms were GPU-only upstream;
+`HighMap/src/erosion/rifts_cpu.cpp` and
+`HighMap/src/transform/advection_cpu.cpp` transcribe their OpenCL kernels into
+CPU code (AD-026). `rifts` mutates its grid in place like the erosion family;
+the two advection functions return a new grid and leave both inputs untouched
+(AD-027). `kw`, `center` and `bbox` are JS tuples that the TS layer converts
+to the scalar binding arguments — the bbox order is `[xmin, xmax, ymin, ymax]`,
+mirroring the C++ `glm::vec4`.
+
+| JS name (binding) | C++ call | Binding signature | JS options (defaults) |
+|---|---|---|---|
+| `rifts` | `hmap::rifts` | `(z&, kwX, kwY, angle, amplitude, seed, elevationNoiseShift, kSmoothBottom, kSmoothTop, radialSpreadAmp, elevationNoiseAmp, clampVmin, remapVmin, applyMask, reverseMask, maskGamma, centerX, centerY, bboxXmin, bboxXmax, bboxYmin, bboxYmax)` | required `kw: [kx, ky]`, `angle`, `amplitude`, `seed`; `elevationNoiseShift: 0, kSmoothBottom: 0.05, kSmoothTop: 0.05, radialSpreadAmp: 0.2, elevationNoiseAmp: 0.1, clampVmin: 0, remapVmin: 0, applyMask: true, reverseMask: false, maskGamma: 1, center: [0.5, 0.5], bbox: [0, 1, 0, 1]` |
+| `advectionParticle` | `hmap::advection_particle` | `(z&, field&, iterations, nparticles, seed, reverse, postFilter, postFilterSigma, advectionLength, valuePersistence, inertia) → Array` | required `nparticles`, `seed`; `iterations: 1, reverse: false, postFilter: true, postFilterSigma: 0.125, advectionLength: 0.1, valuePersistence: 0.99, inertia: 0` |
+| `advectionWarp` | `hmap::advection_warp` | `(z&, field&, advectionLength, valuePersistence) → Array` | `advectionLength: 0.1, valuePersistence: 0.9` |
+
+Deferred: the extra input forms of this family stay unbound — rifts'
+`p_noise_x`/`p_noise_y`/`p_mask`, particle's `p_advection_mask`/`p_mask` plus
+the multi-field and explicit `dx`/`dy` overloads, and warp's `p_mask` plus the
+explicit `dx`/`dy` overload. The C++ ports implement all of them; the JS
+surface has no mask or auxiliary-input-grid concept yet (AD-019 precedent,
+AD-027), and an array of fields has no typed representation. Add them as
+optional options when that concept lands.
+
 ## Notes
 
 - Mutating binding functions take `Array&` and act **in place**; the TS layer

@@ -43,6 +43,8 @@ set(HIGHMAP_WASM_SOURCES
   ${HIGHMAP_SRC}/erosion/thermal_schott.cpp
   # CPU ports of the GPU-only hydraulic family (add-hydraulic-cpu-ports)
   ${HIGHMAP_SRC}/erosion/hydraulic_cpu.cpp
+  # CPU ports of the GPU-only rifts/advection family (add-rifts-advection-cpu-ports)
+  ${HIGHMAP_SRC}/erosion/rifts_cpu.cpp
 
   # --- filters / boundary / shading (pyHighMap surface) ----------------------
   ${HIGHMAP_SRC}/filters/filters.cpp
@@ -50,6 +52,8 @@ set(HIGHMAP_WASM_SOURCES
   ${HIGHMAP_SRC}/shadows/shadows.cpp
   ${HIGHMAP_SRC}/transform/warp.cpp
   ${HIGHMAP_SRC}/transform/transform.cpp
+  # CPU ports of the GPU-only rifts/advection family (add-rifts-advection-cpu-ports)
+  ${HIGHMAP_SRC}/transform/advection_cpu.cpp
 
   # --- math (all CPU, header-declared deps of the chain above) ---------------
   ${HIGHMAP_SRC}/math/core.cpp

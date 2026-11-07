@@ -72,16 +72,23 @@ console.log(elevation.length);
   output maps in their options object (`sediment`, `discharge`, `flow`,
   `waterDepth`, `velU`, `velV`). These are CPU ports of upstream OpenCL
   kernels (AD-017, AD-022).
+- **Rifts / advection**: `rifts` deforms the grid **in place** like the
+  erosion family; `advectionParticle(z, field, nparticles, seed, options?)` and
+  `advectionWarp(z, field, options?)` return **fresh grids** and leave both
+  inputs untouched (AD-026, AD-027).
 - **Deferred**: the mask and deposition-map overloads of the thermal family,
-  and the mask/moisture-map/rain-map input overloads of the hydraulic family,
-  exist in C++ but are not bound (recorded in `HighMap/wasm/manifest.md`).
+  the mask/moisture-map/rain-map input overloads of the hydraulic family, and
+  the mask/noise-offset forms plus the multi-field and explicit `dx`/`dy`
+  overloads of the rifts/advection family exist in C++ but are not bound
+  (recorded in `HighMap/wasm/manifest.md`).
 - **Enums**: `hmap.NoiseType.*` and `hmap.DistanceFunction.*` (raw embind
   values; the string enums exported by the package work too).
 - **Grids**: every grid argument accepts an `HArray` **or** a plain
   `{ data: Float32Array, shape: [ni, nj] }`. Plain inputs are copied in;
   `HArray` inputs are used **in place** (functions that mutate in C++ return
   the same wrapper — zero-copy pipelines). Functions that produce new arrays
-  (`hillshade`, the algebra layer) always return fresh `HArray`s.
+  (`hillshade`, the algebra layer, the advection functions) always return fresh
+  `HArray`s.
 - **`HArray`**: `shape` (`[ni, nj]`), `data` (live `Float32Array` view,
   re-bound on access), `copyData()` (JS-owned), `free()` (idempotent; a
   `FinalizationRegistry` reclaims forgotten wrappers).

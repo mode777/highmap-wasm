@@ -256,3 +256,43 @@ The hydraulic ports (AD-022 to AD-025) added four transferable techniques:
   sample order. Compare one sample per cell, and many samples by aggregate
   metrics (total sediment, total discharge, mean `|Δz|`). A per-cell
   multi-particle bound is not meaningful.
+
+## 12. Hash-based noise, image samplers and non-atomic accumulation (rifts/advection family)
+
+The rifts and advection ports (AD-026, AD-028) added four transferable
+techniques for algorithms whose GPU and CPU results cannot be compared cell by
+cell:
+
+- **Gate hash-based noise on percentiles, never on the maximum.** `rifts`
+  hashes with `fract(sin(...) * 43758.5453123)`. A one-ULP `sin` difference
+  between two math libraries flips the fractional part and moves a whole
+  Voronoi cell, even though the output is visually identical. A pointwise
+  maximum therefore measures hash sensitivity, not port fidelity. Use RMS, a
+  high percentile (`p99` of the absolute error) and the fraction of cells
+  above a small threshold, and record the maximum as a diagnostic only. This
+  is the same lesson as the hydraulic aggregate cases, applied to a
+  deterministic-but-discontinuous field.
+- **Pin the sampler contract, then loosen the bound.** `advection_warp`
+  samples images with mirrored-repeat linear filtering, where OpenCL
+  guarantees only ≥9-bit subpixel precision and leaves rounding to the
+  implementation. Transcribe the documented mapping literally (texel centres
+  at `(i + 0.5) / N`, mirrored fold, clamped edge texels) and keep the same
+  probe/fallback discipline as the hydraulic family: try `CL_R`/`CL_FLOAT`
+  first and fall back to `CL_RGBA`/`CL_FLOAT` when PoCL rejects it. Gate the
+  result on RMS / p99 / `frac_over`; per-cell exactness is not on offer.
+- **Zero every accumulator explicitly and compare many particles only in
+  aggregate.** The pinned particle wrapper allocates `out`/`count` without
+  uploading them and the kernel uses a non-atomic `+=`. A direct-kernel
+  reference must therefore `write_buffer` explicit zeros before the launch,
+  and a many-particle run must be compared by total mass and mean `|Δz|`, not
+  per cell. Run the GPU side twice and record the GPU-vs-GPU spread so the
+  aggregate bound has a measured noise floor. Also check the wrapper's host
+  loop bounds: `advection_particle_gpu.cpp` swaps `shape.x`/`shape.y`, which is
+  harmless on square grids and out of bounds otherwise.
+- **Define undefined behaviour, then exclude it from the bounds.** Warp's
+  `dir` is read uninitialized on a flat start and the particle solver
+  normalizes a zero vector under `inertia = 1`. Pick a defined CPU behaviour
+  (`(0, 0)` in both cases), pin it with a CPU invariant, print an ungated
+  diagnostic line for the GPU side, and keep those parameter settings out of
+  the parity gates. Silently "fixing" the kernel in the port would hide the
+  deviation from the report.

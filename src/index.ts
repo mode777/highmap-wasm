@@ -7,6 +7,8 @@ export { HArray, HighmapError };
 export type { GridInput, GridLike } from "./api/coerce.ts";
 export type {
   Highmap,
+  AdvectionParticleOptions,
+  AdvectionWarpOptions,
   FractalOptions,
   RidgedOptions,
   ClampOptions,
@@ -20,6 +22,7 @@ export type {
   HydraulicSchottOptions,
   HydraulicStreamOptions,
   HydraulicVpipesOptions,
+  RiftsOptions,
   ThermalConserveOptions,
   ThermalFlattenOptions,
   ThermalOptions,

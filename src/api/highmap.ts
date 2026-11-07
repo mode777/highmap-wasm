@@ -170,6 +170,42 @@ export interface HydraulicVpipesOptions {
   fluxDiffusionStrength?: number;
 }
 
+/** Options for `rifts`. `center` is `[cx, cy]`; `bbox` is
+ * `[xmin, xmax, ymin, ymax]`, mirroring the C++ `glm::vec4` order (it is NOT
+ * `[xmin, ymin, xmax, ymax]`). */
+export interface RiftsOptions {
+  elevationNoiseShift?: number;
+  kSmoothBottom?: number;
+  kSmoothTop?: number;
+  radialSpreadAmp?: number;
+  elevationNoiseAmp?: number;
+  clampVmin?: number;
+  remapVmin?: number;
+  applyMask?: boolean;
+  reverseMask?: boolean;
+  maskGamma?: number;
+  center?: readonly [number, number];
+  bbox?: readonly [number, number, number, number];
+}
+
+/** Options for `advectionParticle`; `iterations` defaults to 1, the single
+ * pass of the C++ overload without an iterations argument (0 is a no-op). */
+export interface AdvectionParticleOptions {
+  iterations?: number;
+  reverse?: boolean;
+  postFilter?: boolean;
+  postFilterSigma?: number;
+  advectionLength?: number;
+  valuePersistence?: number;
+  inertia?: number;
+}
+
+/** Options for the z-driven `advectionWarp` form. */
+export interface AdvectionWarpOptions {
+  advectionLength?: number;
+  valuePersistence?: number;
+}
+
 /**
  * The high-level API surface (grows per the binding manifest, AD-008).
  *
@@ -177,7 +213,8 @@ export interface HydraulicVpipesOptions {
  * `HArray` inputs are modified **in place** and returned (zero-copy
  * pipelines), plain `{ data, shape }` inputs are copied first and a new
  * `HArray` is returned. Functions that produce a new array in C++
- * (`hillshade`, the algebra layer) always return a fresh `HArray`.
+ * (`hillshade`, the algebra layer, the advection family) always return a fresh
+ * `HArray`.
  */
 export interface Highmap {
   /** Enum constants (bound 1:1 to the C++ enums). */
@@ -351,6 +388,31 @@ export interface Highmap {
     talus: number | GridLike,
     options?: ThermalSchottOptions,
   ): HArray;
+
+  // --- rifts / advection family (rifts in place; advection new grids) ----------
+
+  rifts(
+    grid: GridLike,
+    kw: readonly [number, number],
+    angle: number,
+    amplitude: number,
+    seed: number,
+    options?: RiftsOptions,
+  ): HArray;
+
+  advectionParticle(
+    grid: GridLike,
+    field: GridLike,
+    nparticles: number,
+    seed: number,
+    options?: AdvectionParticleOptions,
+  ): HArray;
+
+  advectionWarp(
+    grid: GridLike,
+    field: GridLike,
+    options?: AdvectionWarpOptions,
+  ): HArray;
 }
 
 const FRACTAL_DEFAULTS = {
@@ -406,6 +468,45 @@ export function createApi(mod: HighmapModule): Highmap {
   };
 
   /**
+   * Run a C++ op that produces a new grid (advection family, AD-027). Every
+   * input is coerced; later inputs must match the first grid's shape. Plain
+   * `{ data, shape }` inputs become temporaries that are freed in `finally`,
+   * `HArray` inputs pass through untouched and the returned raw handle is
+   * always wrapped in a fresh `HArray`.
+   */
+  const newGrid = (
+    inputs: { value: GridLike; name: string }[],
+    run: (raws: RawArray[]) => RawArray,
+  ): HArray => {
+    const raws: RawArray[] = [];
+    const owned: RawArray[] = [];
+
+    try {
+      let shape: [number, number] | null = null;
+
+      for (const { value, name } of inputs) {
+        const c = coerceGrid(value, name, mod);
+        if (!c.source) owned.push(c.raw);
+
+        const ni = c.raw.ni();
+        const nj = c.raw.nj();
+        if (shape === null) {
+          shape = [ni, nj];
+        } else if (ni !== shape[0] || nj !== shape[1]) {
+          throw new HighmapError(
+            `${name}: shape [${ni}, ${nj}] does not match grid shape [${shape[0]}, ${shape[1]}]`,
+          );
+        }
+        raws.push(c.raw);
+      }
+
+      return wrap(run(raws));
+    } finally {
+      for (const temp of owned) temp.delete();
+    }
+  };
+
+  /**
    * Run an in-place op that needs auxiliary grids (thermal talus / zmax).
    * Numeric auxiliary values become constant grids sized like the target; those
    * temporaries are freed after the call, and plain-object auxiliaries are
@@ -455,6 +556,25 @@ export function createApi(mod: HighmapModule): Highmap {
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new HighmapError(
         `${name}: required number argument is missing or invalid`,
+      );
+    }
+    return value;
+  };
+
+  /** Validate a required fixed-length numeric tuple before the wasm call. */
+  const requireTuple = (
+    value: readonly number[] | undefined,
+    length: number,
+    name: string,
+  ): readonly number[] => {
+    if (
+      !Array.isArray(value) ||
+      value.length !== length ||
+      value.some((v) => typeof v !== "number" || !Number.isFinite(v))
+    ) {
+      const expected = new Array(length).fill("number").join(", ");
+      throw new HighmapError(
+        `${name}: required [${expected}] tuple is missing or invalid`,
       );
     }
     return value;
@@ -1032,6 +1152,104 @@ export function createApi(mod: HighmapModule): Highmap {
         grid,
         [{ value: talus, name: "talus" }],
         (raw, aux) => mod.thermalSchott(raw, aux[0]!, iterations, intensity),
+      );
+    },
+
+    rifts: (grid, kw, angle, amplitude, seed, options = {}) => {
+      const kwValue = requireTuple(kw, 2, "kw");
+      const angleValue = requireNumber(angle, "angle");
+      const amplitudeValue = requireNumber(amplitude, "amplitude");
+      const seedValue = requireNumber(seed, "seed");
+      const center = requireTuple(options.center ?? [0.5, 0.5], 2, "center");
+      const bbox = requireTuple(options.bbox ?? [0, 1, 0, 1], 4, "bbox");
+      const elevationNoiseShift = options.elevationNoiseShift ?? 0;
+      const kSmoothBottom = options.kSmoothBottom ?? 0.05;
+      const kSmoothTop = options.kSmoothTop ?? 0.05;
+      const radialSpreadAmp = options.radialSpreadAmp ?? 0.2;
+      const elevationNoiseAmp = options.elevationNoiseAmp ?? 0.1;
+      const clampVmin = options.clampVmin ?? 0;
+      const remapVmin = options.remapVmin ?? 0;
+      const applyMask = options.applyMask ?? true;
+      const reverseMask = options.reverseMask ?? false;
+      const maskGamma = options.maskGamma ?? 1;
+
+      return inplace(grid, "grid", (raw) =>
+        mod.rifts(
+          raw,
+          kwValue[0]!,
+          kwValue[1]!,
+          angleValue,
+          amplitudeValue,
+          seedValue,
+          elevationNoiseShift,
+          kSmoothBottom,
+          kSmoothTop,
+          radialSpreadAmp,
+          elevationNoiseAmp,
+          clampVmin,
+          remapVmin,
+          applyMask,
+          reverseMask,
+          maskGamma,
+          center[0]!,
+          center[1]!,
+          bbox[0]!,
+          bbox[1]!,
+          bbox[2]!,
+          bbox[3]!,
+        ),
+      );
+    },
+
+    advectionParticle: (grid, field, nparticles, seed, options = {}) => {
+      const nparticlesValue = requireNumber(nparticles, "nparticles");
+      const seedValue = requireNumber(seed, "seed");
+      const iterations = options.iterations ?? 1;
+      const reverse = options.reverse ?? false;
+      const postFilter = options.postFilter ?? true;
+      const postFilterSigma = options.postFilterSigma ?? 0.125;
+      const advectionLength = options.advectionLength ?? 0.1;
+      const valuePersistence = options.valuePersistence ?? 0.99;
+      const inertia = options.inertia ?? 0;
+
+      return newGrid(
+        [
+          { value: grid, name: "grid" },
+          { value: field, name: "field" },
+        ],
+        (raws) =>
+          mod.advectionParticle(
+            raws[0]!,
+            raws[1]!,
+            iterations,
+            nparticlesValue,
+            seedValue,
+            reverse,
+            postFilter,
+            postFilterSigma,
+            advectionLength,
+            valuePersistence,
+            inertia,
+          ),
+      );
+    },
+
+    advectionWarp: (grid, field, options = {}) => {
+      const advectionLength = options.advectionLength ?? 0.1;
+      const valuePersistence = options.valuePersistence ?? 0.9;
+
+      return newGrid(
+        [
+          { value: grid, name: "grid" },
+          { value: field, name: "field" },
+        ],
+        (raws) =>
+          mod.advectionWarp(
+            raws[0]!,
+            raws[1]!,
+            advectionLength,
+            valuePersistence,
+          ),
       );
     },
   };

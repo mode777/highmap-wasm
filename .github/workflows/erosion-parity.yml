@@ -1,10 +1,11 @@
 name: erosion-parity
 
-# GPU-versus-CPU parity for the thermal and hydraulic families
-# (add-thermal-cpu-port, add-hydraulic-cpu-ports).
+# GPU-versus-CPU parity for the thermal, hydraulic and rifts/advection
+# families (add-thermal-cpu-port, add-hydraulic-cpu-ports,
+# add-rifts-advection-cpu-ports).
 #
-# The CPU ports in HighMap/src/erosion/{thermal,hydraulic}_cpu.cpp transcribe
-# the OpenCL kernels; this job is the only place with an OpenCL device (PoCL,
+# The CPU ports in HighMap/src/{erosion,transform}/*_cpu.cpp transcribe the
+# OpenCL kernels; this job is the only place with an OpenCL device (PoCL,
 # CPU ICD), so it is the oracle for the parity claim. A skipped comparison (no
 # device) is a failure, not a pass; the only allowed skip is the recorded
 # float-image-format limitation.
@@ -29,7 +30,10 @@ jobs:
   parity:
     name: GPU-vs-CPU erosion parity
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Raised from 120 for the rifts/advection suite (design D8): about 75
+    # minutes of build plus 20 thermal + 20 hydraulic + 20 rifts/advection and
+    # headroom.
+    timeout-minutes: 180
 
     steps:
       - name: Check out the source
@@ -117,15 +121,30 @@ jobs:
             exit 1
           fi
 
+      - name: Run the rifts/advection parity suite
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          ./build/bin/highmap_tests \
+            --gtest_filter='RiftsAdvectionCpuInvariants.*:RiftsAdvectionParity.*' \
+            --gtest_output=xml:build/rifts-advection-parity.xml \
+            | tee build/rifts-advection-parity.log
+
+          if ! grep -q '^PARITY,' build/rifts-advection-parity.log; then
+            echo "::error::no rifts/advection PARITY metric lines were produced"
+            exit 1
+          fi
+
       - name: Reject unexpected skips
         run: |
           set -euo pipefail
-          for xml in build/thermal-parity.xml build/hydraulic-parity.xml; do
+          for xml in build/thermal-parity.xml build/hydraulic-parity.xml \
+                     build/rifts-advection-parity.xml; do
             if grep -qE 'result="skipped"|skipped="[1-9]' "$xml"; then
               # Only the float-image-format skip is acceptable: the image2d
-              # kernels (thermal_conserve, Schott, vpipes) need a device that
-              # can create CL_R or CL_RGBA float images. Any other skip -
-              # notably a missing device - fails the job.
+              # kernels (thermal_conserve, Schott, vpipes, advection_warp) need
+              # a device that can create CL_R or CL_RGBA float images. Any
+              # other skip - notably a missing device - fails the job.
               unexpected="$(grep -o 'message="[^"]*"' "$xml" \
                 | grep -v 'image support' || true)"
               if [ -n "${unexpected}" ]; then
@@ -161,6 +180,37 @@ jobs:
             echo '```'
             grep '^PARITY_AGG,' build/hydraulic-parity.log || echo "no metrics"
             echo '```'
+            echo ""
+            echo "### Rifts/advection GPU/CPU parity metrics"
+            echo ""
+            echo "Oracle: PoCL (CPU OpenCL ICD) on ubuntu-latest."
+            echo "rifts: hmap::gpu::rifts wrapper; warp: direct advection_warp"
+            echo "kernel with the CL_R -> CL_RGBA probe; particle: direct kernel"
+            echo "with explicitly zeroed out/count buffers."
+            echo ""
+            echo '```'
+            grep '^PARITY,' build/rifts-advection-parity.log || echo "no metrics"
+            echo '```'
+            echo ""
+            echo "### Rifts/advection distribution metrics"
+            echo ""
+            echo "p99_abs is the 99th percentile of per-cell |cpu - gpu|;"
+            echo "frac_over is the fraction of cells above threshold = 1e-2 * range."
+            echo ""
+            echo '```'
+            grep '^PARITY_PCT,' build/rifts-advection-parity.log || echo "no metrics"
+            echo '```'
+            echo ""
+            echo "### Rifts/advection aggregate metrics"
+            echo ""
+            echo "rel_total_pct is the relative total-mass difference in percent;"
+            echo "mean_abs is the mean per-cell |cpu - gpu|. The"
+            echo "advection_particle_gpu_repeat row is GPU-vs-GPU variability and"
+            echo "is ungated."
+            echo ""
+            echo '```'
+            grep '^PARITY_AGG,' build/rifts-advection-parity.log || echo "no metrics"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the report
@@ -173,5 +223,7 @@ jobs:
             build/thermal-parity.log
             build/hydraulic-parity.xml
             build/hydraulic-parity.log
+            build/rifts-advection-parity.xml
+            build/rifts-advection-parity.log
           if-no-files-found: warn
           retention-days: 30

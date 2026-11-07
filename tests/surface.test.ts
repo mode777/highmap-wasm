@@ -57,6 +57,8 @@ describe("binding manifest is the source of truth (AD-008)", () => {
   it("exposes every manifest function", () => {
     expect(manifestApiFunctionNames()).toEqual([
       "add",
+      "advectionParticle",
+      "advectionWarp",
       "clamp",
       "divide",
       "falloff",
@@ -75,6 +77,7 @@ describe("binding manifest is the source of truth (AD-008)", () => {
       "noiseRidged",
       "plateau",
       "remap",
+      "rifts",
       "scale",
       "smoothFill",
       "subtract",

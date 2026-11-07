@@ -1,8 +1,9 @@
 # WASM port — research notes
 
 Status: **living plan** (research complete; phase 1 and the showcase have
-shipped; phase 2 is in progress — the thermal and hydraulic families are done).
-Last updated 2026-11-06.
+shipped; phase 2 is in progress — the thermal, hydraulic and rifts/advection
+families are done; only the primitives family remains, outside phase-2 scope).
+Last updated 2026-11-07.
 Research base: fork of [ottolink-dev/HighMap](https://github.com/ottolink-dev/HighMap)
 at commit `4fb63ae6` (*Merge pull request #463 from ottolink-dev/perf/trench*), 2026-11-05.
 An earlier pass was done on the copy pinned by the Hesiod submodule
@@ -103,6 +104,17 @@ ports live in the upstream source tree rather than under `HighMap/wasm/`, and
 `docs/porting-learnings.md` for the transferable checklist for the remaining
 GPU-only algorithms.
 
+**Update (2026-11-07):** `rifts`, `advection_particle` and `advection_warp`
+are done. They live in `src/erosion/rifts_cpu.cpp` and
+`src/transform/advection_cpu.cpp` with declarations in
+`include/highmap/{erosion_rifts,transform_advection}_cpu.hpp`, are bound on the
+JS surface, and are compared against the desktop OpenCL kernels by the
+`erosion-parity` workflow (`docs/rifts-advection-parity.md`, AD-026/AD-028).
+The GPU-only table above is now historical: the **primitives family**
+(`primitives/primitives_gpu.cpp`, GPU variants of coherent noise) is the only
+remaining GPU-only block, and it sits outside phase-2 scope — the CPU noise
+functions already exist separately in `coherent_noise.cpp` and are bound.
+
 ## 3. Dependency audit for emscripten
 
 | Dependency | Usage | WASM disposition |
@@ -179,7 +191,12 @@ Phases:
    `HighMap/src/erosion/hydraulic_cpu.cpp` with declarations in
    `HighMap/include/highmap/erosion_hydraulic_cpu.hpp`; Schott and vpipes are
    compared through direct kernel launches because the pinned wrappers are
-   broken (`docs/hydraulic-parity.md`). Remaining: `rifts`, `advection_*`.
+   broken (`docs/hydraulic-parity.md`). Rifts/advection family **done**
+   (2026-11-07): `rifts` in `HighMap/src/erosion/rifts_cpu.cpp` and
+   `advection_particle` / `advection_warp` in
+   `HighMap/src/transform/advection_cpu.cpp`, compared against the GPU by
+   `docs/rifts-advection-parity.md`. Only the primitives family remains
+   GPU-only, outside phase-2 scope.
 3. **Harden & publish — partially done.** CI (GitHub Actions emscripten
    build) and the Pages showcase shipped with
    `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. Remaining:

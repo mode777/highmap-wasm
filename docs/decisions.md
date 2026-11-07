@@ -200,3 +200,75 @@ marks the old one superseded — entries are never edited in place.
   many-sample run by aggregate metrics (total sediment, total discharge, mean
   absolute elevation change). A per-cell multi-particle bound would be
   meaningless. The CPU invariants pin determinism and output-map behavior.
+- **AD-026 - Rifts/advection CPU ports live in two family translation units.**
+  (2026-11-07) `hmap::rifts` ships in `HighMap/src/erosion/rifts_cpu.cpp` with
+  `HighMap/include/highmap/erosion_rifts_cpu.hpp`, and
+  `hmap::advection_particle` (six overloads) plus `hmap::advection_warp` (two
+  overloads) ship in `HighMap/src/transform/advection_cpu.cpp` with
+  `HighMap/include/highmap/transform_advection_cpu.hpp`, following AD-017 and
+  AD-022. Two units rather than one keep family ownership with the upstream
+  erosion/transform directories and avoid forcing transform dependencies on the
+  erosion port. The desktop `file(GLOB_RECURSE ... src/*.cpp)` picks both up
+  automatically and the two new curated rows in `HighMap/wasm/sources.cmake`
+  add them to the wasm target, so the shipped artifact and the desktop parity
+  harness execute the same source. The `_cpu` suffix is deliberate: if upstream
+  ever adds CPU implementations with these names, duplicate symbols fail loudly
+  at link time (duplicate default arguments at compile time), and deleting the
+  port file plus the header is the whole rebase fix because bindings and tests
+  speak only the `hmap::` names.
+- **AD-027 - New-grid JS functions and tuple binding for fixed-size math
+  types.** (2026-11-07) `rifts` follows the erosion family: it mutates an
+  `HArray` in place and returns that same wrapper, copying plain `{ data,
+  shape }` inputs first. `advectionParticle` and `advectionWarp` are the first
+  erosion/transform functions that produce a new grid, so the API layer gains a
+  `newGrid` helper next to `inplace` / `inplaceWithOutputs`: it coerces every
+  input (plain objects become temporaries freed in `finally`), rejects a later
+  input whose shape differs from the first with an error naming that argument,
+  calls the binding and wraps the returned handle in a fresh `HArray`. The
+  fixed-size C++ math types are scalarized at the binding boundary instead of
+  registering `glm::vec2`/`glm::vec4` or using `emscripten::val`, following the
+  noise family's `kx, ky` convention: `kw` → `kwX, kwY`, `center` → `centerX,
+  centerY`, `bbox` → `bboxXmin, bboxXmax, bboxYmin, bboxYmax` (the C++ order,
+  not `[xmin, ymin, xmax, ymax]`). The TS layer validates tuple length and
+  finiteness. The JS surface binds only the mask-free, noise-offset-free rifts
+  form, the single-field gradient-driven advection forms and the z-driven warp
+  form; rifts' `p_noise_x`/`p_noise_y`/`p_mask`, particle's
+  `p_advection_mask`/`p_mask` plus the multi-field and explicit `dx`/`dy`
+  overloads, and warp's `p_mask` plus the explicit `dx`/`dy` overload stay
+  unbound and are recorded as prose in `HighMap/wasm/manifest.md` (AD-019
+  precedent). `advectionParticle` binds the `iterations` overload with a JS
+  default of 1, so `iterations: 0` is a documented no-op.
+- **AD-028 - Parity-oracle gaps for rifts, warp and particle advection.**
+  (2026-11-07) Four properties of this family make a pointwise parity bound
+  meaningless, so the harness gates on distributions and aggregates and keeps
+  the per-cell maximum as a diagnostic:
+  - **Rifts' hash is discontinuous.** The Voronoi hash is
+    `fract(sin(dot(p, k) + fseed) * 43758.5453123)`; a one-ULP `sin` difference
+    between the GPU and CPU builds can flip a whole cell. Rifts is gated on
+    RMS, the 99th percentile of per-cell absolute error and the fraction of
+    cells above `1e-2 * range`, never on a pointwise maximum.
+  - **The warp sampler is implementation-defined at the sub-ULP level.**
+    `advection_warp.cl` samples with mirrored-repeat linear filtering, for
+    which OpenCL guarantees only ≥9-bit subpixel precision. The CPU port pins
+    the documented mapping (texel centres at `(i + 0.5) / N`, mirrored fold,
+    clamped edge texels) and the harness uses the same percentile gates.
+  - **The particle wrapper never uploads `out`/`count`, and the kernel
+    accumulates non-atomically.** `advection_particle_gpu.cpp` allocates both
+    buffers without writing them, and `advection_particle.cl` uses a plain
+    `+=` for the accumulator and the count, so a many-particle GPU result is
+    neither reproducible nor comparable cell by cell. The direct-kernel
+    reference uploads explicit zeros; one particle per cell is compared
+    per cell; many-particle cases are claimed only on total mass and mean
+    `|Δz|`; and a repeated GPU run records the GPU-vs-GPU variability. The
+    wrapper's swapped host-stage loop bounds (`j < shape.x`, `i < shape.y`) are
+    out of bounds on non-square grids; the test replica sweeps the whole grid.
+  - **Two kernel constructs are undefined behaviour.** Warp's `dir` is used
+    uninitialized on a flat start and the particle solver calls `normalize()`
+    on a zero vector when `inertia = 1` with no previous direction. The CPU
+    ports define both as `(0, 0)`, the deviations are documented in the port
+    and pinned by CPU invariants, flat starts and `inertia = 1` are excluded
+    from the parity bounds, and a deliberately ungated flat-start line records
+    the GPU side. `rifts`' `pow(val0, mask_gamma)` also stays domain-limited:
+    negative elevations with the mask enabled produce the kernel's NaN, and
+    the parity scenes are remapped to [0, 1]. See
+    `docs/rifts-advection-parity.md`.

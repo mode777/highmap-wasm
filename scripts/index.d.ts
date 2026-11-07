@@ -141,6 +141,33 @@ export declare interface HydraulicVpipesOptions {
   fluxDiffusion?: boolean;
   fluxDiffusionStrength?: number;
 }
+export declare interface RiftsOptions {
+  elevationNoiseShift?: number;
+  kSmoothBottom?: number;
+  kSmoothTop?: number;
+  radialSpreadAmp?: number;
+  elevationNoiseAmp?: number;
+  clampVmin?: number;
+  remapVmin?: number;
+  applyMask?: boolean;
+  reverseMask?: boolean;
+  maskGamma?: number;
+  center?: readonly [number, number];
+  bbox?: readonly [number, number, number, number];
+}
+export declare interface AdvectionParticleOptions {
+  iterations?: number;
+  reverse?: boolean;
+  postFilter?: boolean;
+  postFilterSigma?: number;
+  advectionLength?: number;
+  valuePersistence?: number;
+  inertia?: number;
+}
+export declare interface AdvectionWarpOptions {
+  advectionLength?: number;
+  valuePersistence?: number;
+}
 export declare interface ThermalOptions {
   iterations?: number;
 }
@@ -283,6 +310,26 @@ export declare interface Highmap {
     grid: GridLike,
     talus: number | GridLike,
     options?: ThermalSchottOptions,
+  ): HArray;
+  rifts(
+    grid: GridLike,
+    kw: readonly [number, number],
+    angle: number,
+    amplitude: number,
+    seed: number,
+    options?: RiftsOptions,
+  ): HArray;
+  advectionParticle(
+    grid: GridLike,
+    field: GridLike,
+    nparticles: number,
+    seed: number,
+    options?: AdvectionParticleOptions,
+  ): HArray;
+  advectionWarp(
+    grid: GridLike,
+    field: GridLike,
+    options?: AdvectionWarpOptions,
   ): HArray;
 }
 

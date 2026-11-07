@@ -16,12 +16,14 @@
 #include "highmap/boundary.hpp"
 #include "highmap/erosion.hpp"
 #include "highmap/erosion_hydraulic_cpu.hpp"
+#include "highmap/erosion_rifts_cpu.hpp"
 #include "highmap/erosion_thermal_cpu.hpp"
 #include "highmap/filters.hpp"
 #include "highmap/primitives/coherent_noise.hpp"
 #include "highmap/range.hpp"
 #include "highmap/shadows.hpp"
 #include "highmap/transform.hpp"
+#include "highmap/transform_advection_cpu.hpp"
 
 using namespace emscripten;
 
@@ -480,6 +482,86 @@ void hydraulic_vpipes(hmap::Array &z,
                          p_vel_v);
 }
 
+// --- rifts / advection family (CPU ports, add-rifts-advection-cpu-ports) -----
+
+void rifts(hmap::Array &z,
+           float        kw_x,
+           float        kw_y,
+           float        angle,
+           float        amplitude,
+           std::uint32_t seed,
+           float        elevation_noise_shift,
+           float        k_smooth_bottom,
+           float        k_smooth_top,
+           float        radial_spread_amp,
+           float        elevation_noise_amp,
+           float        clamp_vmin,
+           float        remap_vmin,
+           bool         apply_mask,
+           bool         reverse_mask,
+           float        mask_gamma,
+           float        center_x,
+           float        center_y,
+           float        bbox_xmin,
+           float        bbox_xmax,
+           float        bbox_ymin,
+           float        bbox_ymax)
+{
+  hmap::rifts(z,
+              glm::vec2(kw_x, kw_y),
+              angle,
+              amplitude,
+              seed,
+              elevation_noise_shift,
+              k_smooth_bottom,
+              k_smooth_top,
+              radial_spread_amp,
+              elevation_noise_amp,
+              clamp_vmin,
+              remap_vmin,
+              apply_mask,
+              reverse_mask,
+              mask_gamma,
+              nullptr,
+              nullptr,
+              nullptr,
+              glm::vec2(center_x, center_y),
+              glm::vec4(bbox_xmin, bbox_xmax, bbox_ymin, bbox_ymax));
+}
+
+hmap::Array advection_particle(const hmap::Array &z,
+                               const hmap::Array &field,
+                               int                iterations,
+                               int                nparticles,
+                               std::uint32_t      seed,
+                               bool               reverse,
+                               bool               post_filter,
+                               float              post_filter_sigma,
+                               float              advection_length,
+                               float              value_persistence,
+                               float              inertia)
+{
+  return hmap::advection_particle(z,
+                                  field,
+                                  iterations,
+                                  nparticles,
+                                  seed,
+                                  reverse,
+                                  post_filter,
+                                  post_filter_sigma,
+                                  advection_length,
+                                  value_persistence,
+                                  inertia);
+}
+
+hmap::Array advection_warp(const hmap::Array &z,
+                           const hmap::Array &field,
+                           float              advection_length,
+                           float              value_persistence)
+{
+  return hmap::advection_warp(z, field, advection_length, value_persistence);
+}
+
 } // namespace hmap_wasm
 
 EMSCRIPTEN_BINDINGS(highmap_wasm)
@@ -557,4 +639,7 @@ EMSCRIPTEN_BINDINGS(highmap_wasm)
   function("hydraulicVpipes",
            &hmap_wasm::hydraulic_vpipes,
            allow_raw_pointers());
+  function("rifts", &hmap_wasm::rifts);
+  function("advectionParticle", &hmap_wasm::advection_particle);
+  function("advectionWarp", &hmap_wasm::advection_warp);
 }

@@ -118,6 +118,37 @@ describe("golden scenes", () => {
     expect(sha(t)).toBe(golden["hydraulic-vpipes-seed11"]!.sha256);
   });
 
+  it("rifts-seed11 (finite + byte-exact)", () => {
+    const t = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(t);
+    hmap.rifts(t, [4, 1.2], 30, 0.1, 11);
+    for (const v of t.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(t)).toBe(golden["rifts-seed11"]!.sha256);
+  });
+
+  it("advection-particle-seed11 (finite + byte-exact)", () => {
+    const z = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(z);
+    const f = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 7);
+    hmap.remap(f);
+    const out = hmap.advectionParticle(z, f, 256, 11);
+    for (const v of out.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(out)).toBe(golden["advection-particle-seed11"]!.sha256);
+  });
+
+  it("advection-warp-seed11 (finite + byte-exact)", () => {
+    const z = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 11);
+    hmap.remap(z);
+    const f = hmap.noiseFbm(NoiseType.SIMPLEX2S, [64, 64], [4, 2], 7);
+    hmap.remap(f);
+    const out = hmap.advectionWarp(z, f, {
+      advectionLength: 0.1,
+      valuePersistence: 0.9,
+    });
+    for (const v of out.data) expect(Number.isFinite(v)).toBe(true);
+    expect(sha(out)).toBe(golden["advection-warp-seed11"]!.sha256);
+  });
+
   it("falloff golden stability with each DistanceFunction", () => {
     // every distance function must stay finite and deterministic
     for (const df of Object.keys(DistanceFunction)) {
