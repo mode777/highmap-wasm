@@ -303,3 +303,30 @@ marks the old one superseded — entries are never edited in place.
   gate would buy nothing. Deriving coverage from the manifest keeps the baseline
   honest as the API grows, and the median-over-reps design survives GC and
   scheduler noise without ever failing a build.
+- **AD-030 - Wasm release builds use `-O3` codegen.** (2026-11-08) The shipped
+  wasm artifact is compiled and linked with `-O3` instead of the bootstrap
+  `-Os` default, after a same-machine A/B of the committed artifact (SHA-256
+  verified) and a full re-baseline (`docs/benchmarks.md`):
+  - **Measured choice.** On the heavy cells `-O3` cuts 17-51%
+    (`thermalFlatten` -17%, `hydraulicSchottErosion` -25%,
+    `thermalConserve` -51%, `advectionWarp` -17%) and the full sweep falls from
+    37.4 to 26.7 minutes. The artifact grows from 592,141 to 683,602 bytes
+    (+15.4%), still under 0.7 MB.
+  - **Rejected profiles.** `-O2` is 27 KB smaller but ~16% slower on
+    `hydraulicSchottErosion`; `-O3 -msimd128` only helps `advectionWarp` (~6%),
+    regresses several small cells and adds 13 KB. `-ffast-math` and
+    reassociation stay forbidden because the parity suites define correctness
+    on float32 semantics.
+  - **Implementation.** `WASM_OPT_FLAGS` (default `-O3`) and
+    `WASM_EXTRA_FLAGS` (default empty) are CMake cache variables applied to
+    both compile and link, so alternate profiles can be measured without
+    editing tracked files; the ASAN branch keeps its own compile flags. No
+    upstream source is touched, the desktop build is unaffected, and the
+    single-threaded/no-SharedArrayBuffer requirement still holds.
+  - **Baseline rule.** The recorded benchmark baseline must be measured with
+    the shipped profile; a profile change produces a new full baseline and
+    keeps the previous table as a dated historical comparison
+    (`openspec/specs/benchmarks/spec.md`).
+  Rationale: `-Os` was an unmeasured bootstrap default and is dominated on
+  every cell that dominates wall time; this is the cheapest remaining phase-3
+  gain and does not require pthreads, SIMD or a deployment change.

@@ -105,15 +105,28 @@ target_link_libraries(highmap_wasm PRIVATE
 
 # --- Emscripten flags (design D10) -------------------------------------------
 # Pinned toolchain: Emscripten 6.0.13 (see scripts/build-wasm.sh).
+#
+# Release codegen is speed-optimized (-O3); the flags are cache variables so
+# alternate profiles can be measured without editing tracked files (AD-030).
+# WASM_EXTRA_FLAGS reaches both compile and link for ISA flags such as
+# -msimd128. Fast-math remains forbidden (see the wasm-build spec).
+
+set(WASM_OPT_FLAGS "-O3" CACHE STRING "Optimization flags for the wasm target")
+set(WASM_EXTRA_FLAGS "" CACHE STRING "Extra compile/link flags for the wasm target")
 
 if(WASM_ASAN)
   target_compile_options(highmap_wasm PRIVATE -fsanitize=address -g)
 else()
-  target_compile_options(highmap_wasm PRIVATE -Os -fwasm-exceptions)
+  target_compile_options(highmap_wasm PRIVATE
+    ${WASM_OPT_FLAGS}
+    ${WASM_EXTRA_FLAGS}
+    -fwasm-exceptions
+  )
 endif()
 
 target_link_options(highmap_wasm PRIVATE
-  -Os
+  ${WASM_OPT_FLAGS}
+  ${WASM_EXTRA_FLAGS}
   -fwasm-exceptions
   "-lembind"
   "SHELL:-s MODULARIZE=1"
