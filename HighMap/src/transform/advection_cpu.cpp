@@ -197,7 +197,7 @@ void advection_particle_walk(const Array              &dx,
   const float dry = 1.f;
   const float eps = 1e-9f;
   const float dist_max = advection_length * (float)nx;
-  const float advection_sign = reverse ? -1.f : 1.f;
+  const float advection_sign = reverse ? 1.f : -1.f;
 
   const int num_fields = (int)fields.size();
 
@@ -588,7 +588,7 @@ Array advection_warp(const Array &z,
   if (p_mask && !validate_same_shape(z, *p_mask)) return Array();
 
   // uphill: same as src/transform/advection_warp_gpu.cpp:68-69 (no negation)
-  Array dx = -hmap::gradient_x(z);
+  Array dx = hmap::gradient_x(z);
   Array dy = hmap::gradient_y(z);
 
   return advection_warp(z,
@@ -696,7 +696,7 @@ Array advection_warp(const Array &z,
         const float new_val = sample_mirrored_repeat(advected_field, pos);
         const float mask_v = has_mask ? sample_mirrored_repeat(*p_mask, pos)
                                       : 1.f;
-        const float ratio = mask_v * value_persistence;
+        const float ratio = mask_v * (1.f - value_persistence);
 
         val = ratio * val + (1.f - ratio) * new_val;
       }
