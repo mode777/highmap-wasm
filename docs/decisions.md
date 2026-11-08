@@ -272,3 +272,34 @@ marks the old one superseded — entries are never edited in place.
     negative elevations with the mask enabled produce the kernel's NaN, and
     the parity scenes are remapped to [0, 1]. See
     `docs/rifts-advection-parity.md`.
+- **AD-029 - Benchmark harness is manifest-driven and never gates.**
+  (2026-11-08) The phase-3 baseline is produced by `scripts/bench.mjs`
+  (`npm run bench`) under these locked contracts:
+  - **Coverage comes from the manifest.** The harness parses
+    `HighMap/wasm/manifest.md` with the same rules as
+    `tests/surface.test.ts`; every listed function is timed at 256², 512² and
+    1024², so new surface growth grows the suite automatically (AD-008
+    pattern) and a hand-maintained function list is forbidden.
+  - **Methodology.** Fixed-seed per-family input recipes, inputs built once per
+    cell outside the timed region, one untimed warmup, then 3–10 timed
+    repetitions under a ~2 s per-cell early-stop budget (3 is a floor, 10 a
+    cap), reporting median, min and max; functions that mutate a grid in place
+    are timed on a pristine input copy per rep. Timing uses `performance.now()`.
+  - **Results format.** Each run writes one JSON file to `bench/results/`
+    (gitignored) whose top level is `{"context": {...}, "benchmarks": [...]}`,
+    Google-Benchmark compatible so upstream's
+    `scripts/benchmarks_analyze_results.py` can read it without reshaping; the
+    per-entry fields (`name`, `grid`, `reps`, `median_ms`, `min_ms`, `max_ms`)
+    are our own.
+  - **Timings gate nothing.** `npm test` and every CI workflow ignore measured
+    durations; the only bench test asserts that the harness runs on a small
+    grid and emits structurally valid JSON. A slow rerun can never make the
+    build red.
+  - **Committed baseline.** The reviewed reference numbers, machine/Node/commit
+    attribution and the pthreads comparison protocol live in
+    `docs/benchmarks.md`; results JSON stays out of git.
+  Rationale: phase 3's pthreads and npm-publish decisions need comparable
+  numbers from the shipped artifact, and an unfalsifiable or CI-flaky timing
+  gate would buy nothing. Deriving coverage from the manifest keeps the baseline
+  honest as the API grows, and the median-over-reps design survives GC and
+  scheduler noise without ever failing a build.

@@ -200,9 +200,12 @@ Phases:
    GPU-only, outside phase-2 scope.
 3. **Harden & publish — partially done.** CI (GitHub Actions emscripten
    build) and the Pages showcase shipped with
-   `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. Remaining:
-   benchmarks, the optional pthreads build, and publishing the npm
-   package.
+   `openspec/changes/archive/2026-11-05-add-terrain-showcase/`. The phase-3
+   benchmark baseline is **done** (2026-11-08): the manifest-driven harness
+   `scripts/bench.mjs` (`npm run bench`) and the recorded single-threaded
+   baseline in `docs/benchmarks.md` (36 functions × 256/512/1024, full sweep
+   37.4 min, wasm 592,141 bytes) are committed (AD-029). Remaining: the
+   optional pthreads build and publishing the npm package.
 
 Risks:
 

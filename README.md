@@ -142,6 +142,16 @@ npm run check                  # TypeScript
 node scripts/golden-capture.mjs  # recapture golden scenes (review the diff!)
 ```
 
+### Benchmarks
+
+`npm run bench` (after a build) times every function in the binding manifest
+at 256², 512² and 1024² with fixed-seed inputs and writes
+`bench/results/bench-<date>-<host>.json` (gitignored; one untimed warmup plus
+3–10 timed reps per cell, medians reported). Timings never gate CI. The
+committed single-threaded baseline, its methodology and the pthreads
+comparison protocol are in `docs/benchmarks.md`. Narrow a run with
+`npm run bench -- --only <substr> --sizes 256,512`.
+
 The wasm build lives in `HighMap/wasm/` (standalone CMake project, curated
 CPU-only source list, `cv::Mat`/GSL stubs, Eigen-backed `convolve2d_svd`
 replacement). It never touches the upstream desktop build, with one flagged

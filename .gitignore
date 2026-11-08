@@ -9,3 +9,6 @@ build_wasm/
 node_modules/
 dist/
 *.tsbuildinfo
+
+# benchmark results (the committed baseline lives in docs/benchmarks.md)
+bench/results/*.json

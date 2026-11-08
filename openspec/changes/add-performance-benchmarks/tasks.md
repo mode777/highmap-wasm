@@ -2,7 +2,7 @@
 
 ## 1. Harness
 
-- [ ] 1.1 Add `scripts/bench.mjs`: manifest parsing (same parsing rules as
+- [x] 1.1 Add `scripts/bench.mjs`: manifest parsing (same parsing rules as
   `tests/surface.test.ts`), per-family fixed-seed input recipes (including
   companion grids for `advectionParticle`, `advectionWarp`, `rifts`),
   256/512/1024 grid sweep, warmup + budgeted timed reps (≥3, ≤10, ~2 s
@@ -14,18 +14,18 @@
   --only noiseFbm --sizes 256` exits 0 and prints one row plus writes one
   JSON file whose `benchmarks` array has exactly one entry with finite
   numeric `median_ms`/`min_ms`/`max_ms`.
-- [ ] 1.2 Add `"bench": "node scripts/bench.mjs"` to `package.json` scripts
+- [x] 1.2 Add `"bench": "node scripts/bench.mjs"` to `package.json` scripts
   and `bench/results/*.json` to `.gitignore` (keep a `.gitkeep`). Verify:
   `npm run bench -- --only thermal --sizes 256,512` exits 0 and `git
   status --short` does not list the produced JSON.
 
 ## 2. Full run and baseline
 
-- [ ] 2.1 Run `npm run build` then a full `npm run bench`; record total
+- [x] 2.1 Run `npm run build` then a full `npm run bench`; record total
   wall time (design target < ~10 min; if exceeded, lower per-cell rep
   budgets and record the change). Verify: every manifest function appears
   at all three grid sizes in the JSON; no cell has fewer than 3 reps.
-- [ ] 2.2 Write `docs/benchmarks.md`: methodology (warmup, reps, medians),
+- [x] 2.2 Write `docs/benchmarks.md`: methodology (warmup, reps, medians),
   reference machine + Node version + git commit + wasm artifact size, the
   full median table, the slowest cells called out, and the pthreads
   comparison protocol (same harness, same seeds, compare per-cell medians
@@ -35,12 +35,12 @@
 
 ## 3. Guardrails and docs
 
-- [ ] 3.1 Add `tests/bench.test.ts` smoke: run the harness as a child
+- [x] 3.1 Add `tests/bench.test.ts` smoke: run the harness as a child
   process on one function at 64² (or the smallest supported grid) and
   assert exit 0 and structurally valid JSON (`context` + `benchmarks`
   array with required finite numeric fields). No duration assertions.
   Verify: `npx vitest run tests/bench.test.ts` passes in < 60 s.
-- [ ] 3.2 Append one AD entry to `docs/decisions.md` (AD-029) locking the
+- [x] 3.2 Append one AD entry to `docs/decisions.md` (AD-029) locking the
   harness contract (manifest-driven coverage, warmup + median methodology,
   Google-Benchmark-compatible top-level JSON, no timing gates) and add a
   phase-3 benchmarks status line to `docs/wasm-port-research.md` §7 item
@@ -51,10 +51,10 @@
 
 ## 4. Integration verification
 
-- [ ] 4.1 Run `npm test` and `npm run check` at the repo root; both must
+- [x] 4.1 Run `npm test` and `npm run check` at the repo root; both must
   pass with the new smoke test included and no timing sensitivity (rerun
   `npx vitest run tests/bench.test.ts` once to confirm stability).
-- [ ] 4.2 Inspect `git diff --stat`: only `scripts/bench.mjs`,
+- [x] 4.2 Inspect `git diff --stat`: only `scripts/bench.mjs`,
   `tests/bench.test.ts`, `docs/benchmarks.md`, `bench/results/.gitkeep`,
   `package.json`, `.gitignore`, `README.md`, `docs/decisions.md`,
   `docs/wasm-port-research.md` change; nothing under `HighMap/`, the

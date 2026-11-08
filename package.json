@@ -25,6 +25,7 @@
   "scripts": {
     "build:js": "node scripts/build-js.mjs",
     "build": "bash scripts/build-wasm.sh && node scripts/build-js.mjs",
+    "bench": "node scripts/bench.mjs",
     "check": "tsc --noEmit",
     "golden:capture": "node scripts/golden-capture.mjs",
     "test": "vitest run && node scripts/test-bundler.mjs && node scripts/test-quickstart.mjs",
