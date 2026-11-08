@@ -588,7 +588,7 @@ Array advection_warp(const Array &z,
   if (p_mask && !validate_same_shape(z, *p_mask)) return Array();
 
   // uphill: same as src/transform/advection_warp_gpu.cpp:68-69 (no negation)
-  Array dx = hmap::gradient_x(z);
+  Array dx = -hmap::gradient_x(z);
   Array dy = hmap::gradient_y(z);
 
   return advection_warp(z,

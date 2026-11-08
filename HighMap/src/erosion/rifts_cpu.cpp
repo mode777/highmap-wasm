@@ -72,7 +72,7 @@ inline float fract(float x) { return x - std::floor(x); }
 // sine hash is applied, exactly as the kernel does.
 inline glm::vec2 hash22f(glm::vec2 p, float fseed)
 {
-  p = glm::vec2(p.x * 227.1f + p.y * 311.7f,
+  p = glm::vec2(p.x * 127.1f + p.y * 311.7f,
                 p.x * 269.5f + p.y * 183.3f);
 
   return glm::vec2(fract(std::sin(p.x + fseed) * 43758.5453123f),
