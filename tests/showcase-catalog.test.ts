@@ -23,8 +23,8 @@ afterEach(async () => {
 });
 
 describe("showcase catalog contract", () => {
-  it("has twenty-four unique, kebab-case entries in known families", () => {
-    expect(demos).toHaveLength(24);
+  it("has twenty-seven unique, kebab-case entries in known families", () => {
+    expect(demos).toHaveLength(27);
     const ids = new Set<string>();
     for (const demo of demos) {
       expect(demo.meta.id).toMatch(/^[a-z0-9-]+$/);
@@ -108,6 +108,23 @@ describe("showcase catalog contract", () => {
       expect(
         declared.has(feature),
         `missing hydraulic variant: ${feature}`,
+      ).toBe(true);
+    }
+  });
+
+  it("covers the rifts and advection recipes", () => {
+    const riftsAdvectionFeatures = [
+      "rifts",
+      "advectionParticle",
+      "advectionWarp",
+    ];
+    const declared = new Set(
+      demos.flatMap((demo) => demo.meta.features as readonly string[]),
+    );
+    for (const feature of riftsAdvectionFeatures) {
+      expect(
+        declared.has(feature),
+        `missing rifts/advection recipe: ${feature}`,
       ).toBe(true);
     }
   });

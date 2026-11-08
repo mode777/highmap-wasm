@@ -1,3 +1,5 @@
+import advectionParticle from "./advection-particle.ts?raw";
+import advectionWarp from "./advection-warp.ts?raw";
 import falloff from "./falloff.ts?raw";
 import fractalNoise from "./fractal-noise.ts?raw";
 import hydraulicMcdonald from "./hydraulic-mcdonald.ts?raw";
@@ -8,6 +10,7 @@ import hydraulicVpipes from "./hydraulic-vpipes.ts?raw";
 import pingpongNoise from "./pingpong-noise.ts?raw";
 import plateau from "./plateau.ts?raw";
 import ridgedNoise from "./ridged-noise.ts?raw";
+import rifts from "./rifts.ts?raw";
 import smoothFill from "./smooth-fill.ts?raw";
 import streamErosion from "./stream-erosion.ts?raw";
 import thermal from "./thermal.ts?raw";
@@ -29,6 +32,8 @@ const sources: Record<string, string> = {
   "ridged-noise": ridgedNoise,
   "worley-noise": worleyNoise,
   warp: warp,
+  "advection-warp": advectionWarp,
+  "advection-particle": advectionParticle,
   falloff: falloff,
   plateau: plateau,
   "smooth-fill": smoothFill,
@@ -48,6 +53,7 @@ const sources: Record<string, string> = {
   "thermal-inflate": thermalInflate,
   "thermal-scree": thermalScree,
   "thermal-schott": thermalSchott,
+  rifts: rifts,
 };
 
 export function getDemoSource(id: string): string {

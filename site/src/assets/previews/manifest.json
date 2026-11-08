@@ -1,6 +1,6 @@
 {
   "previewVersion": 3,
-  "capturedAt": "2026-11-07T08:29:02.217Z",
+  "capturedAt": "2026-11-08T08:02:33.969Z",
   "viewport": {
     "width": 640,
     "height": 400,
@@ -8,6 +8,18 @@
   },
   "quality": 82,
   "demos": {
+    "advection-particle": {
+      "file": "advection-particle.webp",
+      "sourceHash": "e70a212e715bb7f7e8fa03d2b1038b08587aac361dd2a4b6b79bbaceb41e2895",
+      "width": 1280,
+      "height": 800
+    },
+    "advection-warp": {
+      "file": "advection-warp.webp",
+      "sourceHash": "dec1e944c49050617d2655acff86f5735388110133bdae601fd7abd2e7b7bcd0",
+      "width": 1280,
+      "height": 800
+    },
     "falloff": {
       "file": "falloff.webp",
       "sourceHash": "a3a688c7ce58d1f5c982ad7c60e5f1e5a49169dc9eae6398bfc2465f162f2b13",
@@ -65,6 +77,12 @@
     "ridged-noise": {
       "file": "ridged-noise.webp",
       "sourceHash": "f181f52ec9b85de9bb183e32139939d1e2a769ddcb60a530de65e01446dafc2f",
+      "width": 1280,
+      "height": 800
+    },
+    "rifts": {
+      "file": "rifts.webp",
+      "sourceHash": "f0de802b67247b7d900f2bb6812d1d6a3d31fc05bc4d0bc17e087a25c8df5c84",
       "width": 1280,
       "height": 800
     },

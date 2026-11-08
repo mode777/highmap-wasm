@@ -160,6 +160,34 @@ the adaptation note; no substitute is applied.
 `hydraulicMusgrave` has no entry while its numerical stability is unresolved.
 The catalog test excludes it and requires the other five hydraulic functions.
 
+## Rifts and advection coverage
+
+The catalog adds three panel-level ports beside the thermal and hydraulic ones:
+
+- `rifts` — post-rifts `z2` banner panel of
+  `examples/ex_rifts/ex_rifts.cpp` (`erosion`, `volcanic`).
+- `advection-warp` — warped terrain `za` banner panel of
+  `examples/ex_advection_warp/ex_advection_warp.cpp` (`shaping`,
+  `temperate`).
+- `advection-particle` — advected field `n` banner panel of
+  `examples/ex_advection_particle/ex_advection_particle.cpp` (`shaping`,
+  `arid`).
+
+All three keep the examples' 256² grid, seeds (0 for `rifts`, 1 for both
+advection entries), noise recipes, and source budgets: rifts `[8, 1.5]`, 30°,
+amplitude 0.1, and rifts seed 1; advection length 0.05 and value persistence
+0.96; 10000 particles and 10 iterations. No web-sized reductions are applied,
+so none of the three carries a budget adaptation note.
+
+The rifts example computes `1 + fbm`, then `zeroed_edges`, then `remap`. The
+wasm API does not expose `zeroed_edges`, so that pre-pass is omitted and
+recorded in the entry's `adaptationNote`; no substitute is applied, per the
+demo contract.
+
+`advectionWarp` and `advectionParticle` return a fresh grid instead of
+mutating their input. Both builders `copyOut` the result and then free the
+returned grid in addition to the input grids in `finally`.
+
 ## Add a demo
 
 1. Add `src/demos/<id>.ts` using the contract above.

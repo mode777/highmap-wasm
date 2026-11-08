@@ -1,3 +1,5 @@
+import advectionParticle from "./advection-particle.js";
+import advectionWarp from "./advection-warp.js";
 import falloff from "./falloff.js";
 import fractalNoise from "./fractal-noise.js";
 import hydraulicMcdonald from "./hydraulic-mcdonald.js";
@@ -8,6 +10,7 @@ import hydraulicVpipes from "./hydraulic-vpipes.js";
 import pingpongNoise from "./pingpong-noise.js";
 import plateau from "./plateau.js";
 import ridgedNoise from "./ridged-noise.js";
+import rifts from "./rifts.js";
 import smoothFill from "./smooth-fill.js";
 import streamErosion from "./stream-erosion.js";
 import thermal from "./thermal.js";
@@ -40,6 +43,8 @@ export const demos: readonly DemoEntry[] = [
   ridgedNoise,
   worleyNoise,
   warp,
+  advectionWarp,
+  advectionParticle,
   falloff,
   plateau,
   smoothFill,
@@ -59,6 +64,7 @@ export const demos: readonly DemoEntry[] = [
   thermalInflate,
   thermalScree,
   thermalSchott,
+  rifts,
 ];
 
 const byId = new Map(demos.map((demo) => [demo.meta.id, demo] as const));
