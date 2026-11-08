@@ -86,9 +86,10 @@ PARITY_AGG,<variant>,<scene>,<iters>,<rel_total_pct>,<mean_abs>,<range>
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-std=gnu17 \
-  -DHIGHMAP_ENABLE_EXAMPLES=OFF -DHIGHMAP_ENABLE_BENCHMARKS=OFF \
-  -DHIGHMAP_ENABLE_TESTS=ON
+  -DHIGHMAP_ENABLE_DOCS=OFF -DHIGHMAP_ENABLE_EXAMPLES=OFF \
+  -DHIGHMAP_ENABLE_BENCHMARKS=OFF -DHIGHMAP_ENABLE_TESTS=ON -S .
 cmake --build build --target highmap_tests --parallel 4
+set -euo pipefail
 ./build/bin/highmap_tests \
   --gtest_filter='RiftsAdvectionCpuInvariants.*:RiftsAdvectionParity.*' \
   --gtest_output=xml:build/rifts-advection-parity.xml \
@@ -102,28 +103,68 @@ grep '^PARITY_AGG,' build/rifts-advection-parity.log
 `nn-c` (Triangle) code uses K&R definitions that C23 rejects. `--parallel 4`
 keeps the build inside the runner's memory.
 
-The `erosion-parity` GitHub workflow runs this suite after the thermal and
-hydraulic suites on `ubuntu-latest` with PoCL, with its own 20-minute step
-timeout. It also accepts a `no_device` dispatch input that points
-`OCL_ICD_VENDORS` at a missing path, which proves that a device-less run fails
-through this suite instead of skipping it.
+The `erosion-parity` GitHub workflow runs the same configure, build and run
+commands after the thermal and hydraulic suites on `ubuntu-latest` with PoCL.
+The rifts/advection step has its own 20-minute timeout, a `^PARITY,` presence
+check, the third XML in the skip guard (still allowing only the image-format
+skip), the third XML/log in the uploaded artifact set, and `PARITY_PCT,` /
+`PARITY_AGG,` sections in the job summary.
+
+### Device-less guard (task 5.5)
+
+The workflow accepts a `no_device` dispatch input that sets
+`OCL_ICD_VENDORS=/nonexistent`. Dispatch run
+[42453970120](https://github.com/mode777/highmap-wasm/actions/runs/42453970120)
+failed at the **Report the OpenCL platform** step with
+`no OpenCL platform available - parity cannot be verified` (exit 1), before any
+suite was started. The guard therefore fails the job before a suite could
+silently skip; a device-less environment can never pass. The final green run
+[42453946008](https://github.com/mode777/highmap-wasm/actions/runs/42453946008)
+ran all three suites with no unexpected skips.
 
 ## Measured agreement
 
-Two reference oracle runs are recorded. The **first run** (2026-11-07, tree
-`e349bec1`) exposed the particle draw-order bug and the rifts hash-flip
-distribution; the **second run** (2026-11-07, tree `592074466`) repeated every
-suite after the draw-order fix. The only port change between the runs was the
-draw-order fix (`draw_start_pos()` in `advection_cpu.cpp`); the test gained the
-`ParticleStartDrawOrder` invariant. The run-2 numbers are the frozen
-reference; the run-1 tables are kept because they justify the rifts
-recalibration and the particle root cause.
+Three reference oracle runs and the final frozen green run are recorded. The
+**first run** (2026-11-07, tree `e349bec1`) exposed the particle draw-order bug
+and the rifts hash-flip distribution; the **second run** (2026-11-07, tree
+`592074466`) repeated every suite after the draw-order fix. The only port change
+between the runs was the draw-order fix (`draw_start_pos()` in
+`advection_cpu.cpp`); the test gained the `ParticleStartDrawOrder` invariant.
+The run-2 numbers are the per-variant reference; the run-1 tables are kept
+because they justify the rifts recalibration and the particle root cause.
 
 A **third run** (2026-11-08, tree `a66929a77`) is the mutation check. No port
 arithmetic changed except the deliberate rifts hash mutation, but a rebuilt
 oracle shifted PoCl's work-item scheduling and exposed the per-binary nature of
 the particle collision losses. Its measurements are in "Mutation check" and
 drove the one-per-cell gate redesign described below.
+
+The **final green run** (2026-11-08, tree `4cfc0d63e`, run
+[42453946008](https://github.com/mode777/highmap-wasm/actions/runs/42453946008),
+12m54s) is the frozen reference: all three suites green, no unexpected skips.
+
+### Final green run (2026-11-08, tree `4cfc0d63e`)
+
+Oracle: PoCl, `OpenCL 3.0`, `cpu-skylake-avx512-AMD EPYC 9V45`. Key measured
+metrics:
+
+```text
+PARITY,advection_particle_one_per_cell,fbm,1,5.96e-8,4.09e-9,1.0
+PARITY,advection_particle_one_per_cell,ramp,1,5.96e-8,1.86e-9,0.75
+PARITY,advection_particle_single_trail,fbm,1,0,0,1.0        # bit-identical
+PARITY,advection_particle_single_trail,ramp,1,0,0,0.75      # bit-identical
+PARITY_AGG,particle_agg_iter1,{fbm,ramp},1,0,0,...           # bit-identical
+PARITY,advection_warp_l050_p0960,fbm,1,1.19e-7,2.94e-8,1.0  # warp rounding level (all 20 gated scenes)
+PARITY,rifts_a0_amp02,ramp,1,4.45e-2,7.58e-3,0.70           # rifts at documented sin-hash noise level
+```
+
+Suite totals: `RiftsAdvectionCpuInvariants` 31 tests in 771 ms,
+`RiftsAdvectionParity` 7 tests in 1257 ms, and the full
+`RiftsAdvectionCpuInvariants.*:RiftsAdvectionParity.*` filter 38 tests in
+2028 ms. The one-per-cell fbm scene returned to rounding level (`rms 4.09e-9`),
+both single-particle trail scenes were bit-identical, every aggregate scene was
+bit-identical, warp stayed at rounding level, and rifts stayed at the calibrated
+sin-hash noise level (`rms/range 7.58e-3` on the ramp).
 
 ### Second run (2026-11-07, tree `592074466`, post-fix)
 
@@ -393,15 +434,16 @@ tables above; run 3 started the mutation check (see "Mutation check").
 Bounds, as frozen by the first oracle run (2026-11-07, tree `e349bec1`) and
 revised by the second run (2026-11-07, tree `592074466`); the particle
 one-per-cell rows were redesigned after the third run (2026-11-08, tree
-`a66929a77`):
+`a66929a77`) and confirmed by the final green run (2026-11-08, tree
+`4cfc0d63e`):
 
 | case | gate | state |
 |---|---|---|
-| rifts | `rms <= 2.5e-2 · range`, `p99 <= 1e-1 · range`, `frac_over(1e-2) <= 0.4`; max diagnostic | **recalibrated** in run 1, run 2 worst `rms/range` 1.04e-2 |
-| warp (direct kernel) | `rms <= 1e-3 · range`, `p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`; max diagnostic | unchanged, run 2 measured `max <= 3.3e-7` |
-| particle, one particle per cell (fbm and ramp) | `rms <= 5e-3 · range`; max diagnostic | **redesigned** after run 3: the oracle's loss pattern is per-binary; run 3 measured fbm `max 0.0444` / `rms 1.39e-3`, ramp `max 5.96e-8` / `rms 1.86e-9` |
-| particle, single-particle trail (fbm and ramp) | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | new collision-free exact case: one particle, one writer per cell |
-| particle, many particles | `rel_total_pct <= 5`, `mean_abs <= 1e-2 · range`; per-cell metrics diagnostic | **frozen at the design values**, run 2 measured `0 / 0` on every scene |
+| rifts | `rms <= 2.5e-2 · range`, `p99 <= 1e-1 · range`, `frac_over(1e-2) <= 0.4`; max diagnostic | **recalibrated** in run 1; run 2 worst `rms/range` 1.04e-2, final run worst 7.58e-3 |
+| warp (direct kernel) | `rms <= 1e-3 · range`, `p99 <= 1e-2 · range`, `frac_over(1e-2) <= 1e-2`; max diagnostic | unchanged; run 2 measured `max <= 3.3e-7`, final run `l050_p0960` measured `1.19e-7 / 2.94e-8` |
+| particle, one particle per cell (fbm and ramp) | `rms <= 5e-3 · range`; max diagnostic | **redesigned** after run 3: the oracle's loss pattern is per-binary; run 3 measured fbm `max 0.0444` / `rms 1.39e-3`, ramp `max 5.96e-8` / `rms 1.86e-9`; final run measured fbm `5.96e-8 / 4.09e-9`, ramp `5.96e-8 / 1.86e-9` |
+| particle, single-particle trail (fbm and ramp) | `max <= 1e-5 · range`, `rms <= 2e-6 · range` | new collision-free exact case: one particle, one writer per cell; final run bit-identical on both scenes |
+| particle, many particles | `rel_total_pct <= 5`, `mean_abs <= 1e-2 · range`; per-cell metrics diagnostic | **frozen at the design values**; run 2 measured `0 / 0` on every scene, final run bit-identical |
 
 ### Rifts recalibration
 
@@ -469,28 +511,33 @@ or step sign. Each mutation is applied once, measured, recorded below, and
 reverted. Do not loosen a bound without the measured numbers and a mutation
 check justifying it.
 
-`Run 3 (2026-11-08, tree a66929a77)` started the mutation check against the
-recalibrated rifts bounds and the post-fix particle implementation. The first
-rifts mutation passed (it was undetectable) and is replaced by a stronger one;
-the remaining mutations are `TODO`. The post-fix PARITY / PARITY_AGG tables are
-filled in "Measured agreement".
+Run 3 (2026-11-08, tree `a66929a77`) started the mutation check against the
+recalibrated rifts bounds and the post-fix particle implementation. The check
+finished on the frozen tree `4cfc0d63e`; the table below records every applied
+mutation, its CI run and the outcome. The post-fix PARITY / PARITY_AGG tables
+are filled in "Measured agreement".
 
 ### Mutation check
 
-Run 3 applied the first rifts mutation to the recalibrated bounds. It was
-undetectable and is replaced by an O(1) hash-input mutation. The remaining rows
-are `TODO` for the warp and particle cycles and the final green run.
+Each mutation was applied once, measured, and reverted in the immediately
+following commit; `git diff` shows no mutation lines remain. The first rifts
+mutation was undetectable by design of the sin-hash noise floor and is replaced
+by an O(1) hash-input mutation; every remaining mutation was caught.
 
-| mutation | measured failure | bound | result |
+| mutation | commit | run | result |
 |---|---|---|---|
-| rifts hash `43758.5453123f → 43758.5f` (run 3, tree `a66929a77`) | none — `RiftsAdvectionParity.Rifts` passed with near-unchanged metrics; the ≤4.5% hash-product perturbation stays below the calibrated sin-hash noise floor | `2.5e-2` / `1e-1` / `0.4` | **undetected** (by design of the noise floor); replaced by the dot-constant mutation below |
-| rifts first dot constant `127.1f → 227.1f` | TODO(next-run) | `2.5e-2` / `1e-1` / `0.4` | TODO(next-run) |
-| warp persistence `value_persistence` factor | TODO(next-run) | `1e-3` / `1e-2` / `1e-2` | TODO(next-run) |
-| warp z-driven gradient sign (uphill → downhill) | TODO(next-run) | `1e-3` / `1e-2` / `1e-2` | TODO(next-run) |
-| particle persistence `value_persistence` | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
-| particle step sign (`advection_sign`) | TODO(next-run) | `5%` / `1e-2 · range` | TODO(next-run) |
-| particle start-position draw order (x ↔ y) | first run: `one_per_cell` fbm max 0.1816 / rms 0.0378, ramp max 0.0164 / rms 0.0043; `mean_abs` 0.0303 vs gate 1e-2 · range | one-per-cell `rms <= 5e-3 · range`; single-trail `1e-5` / `2e-6`; aggregate `1e-2 · range` | **caught** (the first run *was* this mutation; fixed, pinned by `ParticleStartDrawOrder`; the one-per-cell rms gate still fails this class by ~7.6x) |
-| scheduling sensitivity (run 3, no mutation) | rebuilt PoCl oracle moved the one-per-cell loss pattern: fbm `max 0.0444` / `rms 1.39e-3` (~22 lost deposits), ramp `max 5.96e-8` / `rms 1.86e-9`; run 2 had been bit-exact on fbm and lost one deposit on the ramp | old fbm `1e-5` / `2e-6`; old ramp `rms 1e-3 · range` | **gate redesign**: one-per-cell scenes now gate `rms <= 5e-3 · range` (max diagnostic); exact per-cell gate moved to the collision-free `ParticleSingleParticleTrail` case, as implemented in this change |
+| rifts `43758.5453123f -> 43758.5f` (sine-hash multiplier, p.x) | a66929a77 | 42425076782 | NOT DETECTED — gates passed; perturbation ≤4.5% is below the calibrated sin-hash noise floor (inherent, not a gate defect); ALSO exposed PoCl per-binary scheduling sensitivity (fbm one-per-cell rms 1.39e-3) → gate redesign |
+| rifts `127.1f -> 227.1f` (hash22f dot constant) | 7a6356cf3 | 42426969194 | CAUGHT — `RiftsAdvectionParity.Rifts` FAILED (e.g. a90_amp02 frac_over 0.298, noise_offsets rms 1.11e-2); all other suites green |
+| warp z-driven `gradient_x` negated | 74a456e0b | 42452261503 | CAUGHT — `RiftsAdvectionCpuInvariants.WarpExplicitGradientEqualsGradientDriven` FAILED (the wrapper-level gradient convention is bound by the invariants; the parity oracle binds the kernel arithmetic) |
+| warp backward-blend persistence inverted (`ratio = mask * (1 - p)`) | 887846f53 | 42453237036 | CAUGHT — `RiftsAdvectionParity.Warp` FAILED (parity-gate sensitivity proven) |
+| particle step sign flipped (`reverse ? 1 : -1`) | 887846f53 | 42453237036 | CAUGHT — `ParticleOnePerCell`, `ParticleSingleParticleTrail`, `ParticleAggregate` + 3 invariants FAILED |
+| final revert (frozen constants) | 4cfc0d63e | 42453946008 | GREEN — all three suites pass |
+
+The first-run draw-order failure (the bug fixed by `draw_start_pos()`) and the
+run-3 PoCl scheduling shift were not applied mutations; they are documented in
+"Particle draw order" and "Particle one-per-cell redesign" above. The two
+advection mutation runs also proved that the invariant suite, not only the GPU
+oracle, catches wrapper-level sign errors.
 
 ## Known oracle gaps
 
@@ -572,16 +619,22 @@ are `TODO` for the warp and particle cycles and the final green run.
 
 ## Cost
 
-`TODO(CI): record the Node wasm cost from the built artifact` (same format as
-`docs/hydraulic-parity.md`; single-threaded wasm, measured from `dist/`):
+Single-threaded wasm, Windows 11 / Intel Core Ultra 5 335 / Node 26.13,
+measured from the built `dist/index.js` + `dist/highmap.wasm` artifact through
+the public `initHighmap()` API. The artifact is current for the ports:
+`dist/highmap.wasm` was built after the draw-order fix, and the only later
+port-source changes were the reverted mutation commits
+(`git diff 592074466..HEAD -- HighMap/src/transform/advection_cpu.cpp
+HighMap/src/erosion/rifts_cpu.cpp` is empty). Init time was 12.1 ms; the
+per-call figures are medians of 20 calls after 3 warm-ups:
 
 | function | grid | parameters | time |
 |---|---|---|---|
-| `rifts` | 256² | `kw = (4, 1.2)`, angle 30, amplitude 0.1, seed 11 | TODO(CI) |
-| `rifts` | 512² | same | TODO(CI) |
-| `advectionWarp` | 256² | length 0.1, persistence 0.9 | TODO(CI) |
-| `advectionParticle` | 256² | 1024 particles, iterations 1 | TODO(CI) |
+| `rifts` | 64² | `kw = (4, 1.2)`, angle 30, amplitude 0.1, seed 11 | 1.05 ms |
+| `advectionWarp` | 64² | length 0.1, persistence 0.9 (defaults) | 1.65 ms |
+| `advectionParticle` | 64² | 256 particles, iterations 1 | 0.21 ms |
 
-These are cost notes, not optimization targets: the ports are deliberately
-sequential and synchronous, matching the wasm build's `-fno-openmp`
-`VA_SEQUENTIAL` execution model (AD-010).
+The times include the high-level API's output allocation and grid copy. These
+are cost notes, not optimization targets: the ports are deliberately sequential
+and synchronous, matching the wasm build's `-fno-openmp` `VA_SEQUENTIAL`
+execution model (AD-010).

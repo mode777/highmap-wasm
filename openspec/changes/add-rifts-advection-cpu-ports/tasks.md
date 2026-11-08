@@ -300,7 +300,7 @@
   every particle case with no unexpected skip and the gated metrics hold or are
   calibrated in 5.4.
 
-- [ ] 5.4 Calibrate and freeze the parity bounds from the first full oracle
+- [x] 5.4 Calibrate and freeze the parity bounds from the first full oracle
   run, then run one deliberate mutation per function and confirm each breaks
   its gate before reverting: a rifts hash or smoothing constant (for example
   `43758.5453123f` -> `43758.5f`), the warp persistence factor or the
@@ -310,7 +310,7 @@
   constants in `tests/src/test_rifts_advection_cpu.cpp`, each mutated run fails
   the corresponding gate, and `git diff` shows the mutation lines reverted.
 
-- [ ] 5.5 Extend `.github/workflows/erosion-parity.yml`: raise
+- [x] 5.5 Extend `.github/workflows/erosion-parity.yml`: raise
   `timeout-minutes` from 120 to 180, add a third run step
   `--gtest_filter='RiftsAdvectionCpuInvariants.*:RiftsAdvectionParity.*'` with
   `timeout-minutes: 20`, XML `build/rifts-advection-parity.xml` and
@@ -322,7 +322,7 @@
   sections and artifact, and that a `no_device` dispatch fails through the new
   suite instead of skipping it.
 
-- [ ] 5.6 Write `docs/rifts-advection-parity.md` (oracle device/driver, exact
+- [x] 5.6 Write `docs/rifts-advection-parity.md` (oracle device/driver, exact
   harness invocation, frozen bound table, measured metrics, mutation-check
   table, wrapper gaps for particle `out`/`count` and warp `CL_R`, the
   `CL_RGBA` fallback, the warp `dir` and particle inertia deviations, the
