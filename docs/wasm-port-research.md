@@ -1,9 +1,10 @@
 # WASM port — research notes
 
-Status: **living plan** (research complete; phase 1 and the showcase have
-shipped; phase 2 is in progress — the thermal, hydraulic and rifts/advection
-families are done; only the primitives family remains, outside phase-2 scope).
-Last updated 2026-11-07.
+Status: **living plan** (research complete; phase 1, the showcase and phase 2
+have shipped — the thermal, hydraulic and rifts/advection families are
+ported and parity-checked; only the primitives family remains GPU-only,
+outside phase-2 scope; next up is phase 3).
+Last updated 2026-11-08.
 Research base: fork of [ottolink-dev/HighMap](https://github.com/ottolink-dev/HighMap)
 at commit `4fb63ae6` (*Merge pull request #463 from ottolink-dev/perf/trench*), 2026-11-05.
 An earlier pass was done on the copy pinned by the Hesiod submodule
@@ -180,7 +181,7 @@ Phases:
    `HighMap/wasm/manifest.md`; npm package with Node smoke tests. See
    `openspec/changes/archive/2026-11-05-bootstrap-wasm-package/`. The
    shipped module is ~0.5 MB wasm, below the 2–5 MB estimate.
-2. **CPU ports of GPU-only algorithms - in progress.** Thermal family
+2. **CPU ports of GPU-only algorithms - complete.** Thermal family
    **done** (2026-11-06): nine variants ported in
    `HighMap/src/erosion/thermal_cpu.cpp` with declarations in
    `HighMap/include/highmap/erosion_thermal_cpu.hpp`, plus the existing CPU

@@ -51,11 +51,14 @@ the original repo; we sync from it and try hard not to diverge (see
 - [x] Phase 1: `highmap_wasm` CMake target + embind surface + smoke test
       (archived bootstrap change, 2026-11-05)
 - [x] Terrain showcase: static GitHub Pages gallery of example-faithful
-      specimens (archived showcase change, 2026-11-05)
-- [ ] Phase 2: CPU ports of GPU-only algorithms — **next**; start with the
-      thermal family, excluding `thermal_schott` (already CPU)
+      specimens (archived showcase change, 2026-11-05; thermal, hydraulic
+      and rifts/advection demo waves added 2026-11-06..08)
+- [x] Phase 2: CPU ports of GPU-only algorithms — thermal (2026-11-06),
+      hydraulic (2026-11-07) and rifts/advection (2026-11-08) families
+      ported, bound and parity-checked in CI; only the primitives family
+      remains GPU-only, outside phase-2 scope
 - [ ] Phase 3: benchmarks, optional pthreads build, npm publish (CI and
-      Pages already shipped)
+      Pages already shipped) — **next**
 
 ## Conventions
 

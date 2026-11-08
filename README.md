@@ -4,13 +4,15 @@
 > terrain generation library — CPU-only, no native dependencies, one npm
 > package for Node and the browser.
 
-**Status: bootstrap (0.0.x, unpublished).** This is the first end-to-end
-slice: a curated CPU-only build of the HighMap C++ library compiled with
-Emscripten + embind, wrapped in a TypeScript API modeled on the
-[pyHighMap](https://github.com/otto-link/pyHighMap) Python bindings. The seed
-function surface (~30 functions: pyHighMap parity, array algebra, CPU
-erosion twins) grows module-family by module-family toward the full curated
-API — see `docs/decisions.md` (AD-009).
+**Status: 0.0.x, unpublished.** A curated CPU-only build of the HighMap C++
+library compiled with Emscripten + embind, wrapped in a TypeScript API
+modeled on the [pyHighMap](https://github.com/otto-link/pyHighMap) Python
+bindings. The API surface (36 functions, enforced against the binding
+manifest) covers pyHighMap parity, array algebra, and the thermal,
+hydraulic, rifts and advection families — every ported algorithm is
+parity-checked against the desktop OpenCL build in CI. The surface grows
+module-family by module-family toward the full curated API — see
+`docs/decisions.md` (AD-009).
 
 - One import everywhere: ESM-only, async `init()`, identical usage in
   Node >= 18, browsers, and Web Workers.
