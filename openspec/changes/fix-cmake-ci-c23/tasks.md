@@ -6,7 +6,8 @@
 
 ## 2. CI verification
 
-- [ ] 2.1 After the apply commit is pushed to `main` per the workflow follow-up, watch the `CMake on multiple platforms` run for that commit (`gh run watch <id> --repo mode777/highmap-wasm`) and verify it concludes successfully; record the run URL. Confirm the `build-wasm`, `erosion-parity`, and `pages` runs on the same commit are also green.
+- [x] 2.1 After the apply commit is pushed to `main` per the workflow follow-up, watch the `CMake on multiple platforms` run for that commit (`gh run watch <id> --repo mode777/highmap-wasm`) and verify it concludes successfully; record the run URL. Confirm the `build-wasm`, `erosion-parity`, and `pages` runs on the same commit are also green.
+  Run: https://github.com/mode777/highmap-wasm/actions/runs/42466858438 (CMake, 25m57s, first green); parity https://github.com/mode777/highmap-wasm/actions/runs/42466858418 (attempt 2; attempt 1 hit the documented per-binary particle-oracle flake)
 
 ## Workflow follow-up
 
