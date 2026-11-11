@@ -3,10 +3,10 @@
 Status: **living plan** (research complete; phase 1, the showcase and phase 2
 have shipped — the thermal, hydraulic and rifts/advection families are
 ported and parity-checked; only the primitives family remains GPU-only,
-outside phase-2 scope; phase 3 is in progress — benchmarks and codegen
-optimization are done, with the optional pthreads build and npm publish
+outside phase-2 scope; phase 3 is in progress — benchmarks, codegen
+optimization and npm publishing are done, with the optional pthreads build
 remaining).
-Last updated 2026-11-08.
+Last updated 2026-11-11.
 Research base: fork of [ottolink-dev/HighMap](https://github.com/ottolink-dev/HighMap)
 at commit `4fb63ae6` (*Merge pull request #463 from ottolink-dev/perf/trench*), 2026-11-05.
 An earlier pass was done on the copy pinned by the Hesiod submodule
@@ -207,8 +207,9 @@ Phases:
    manifest-driven harness `scripts/bench.mjs` (`npm run bench`), the committed
    baseline in `docs/benchmarks.md` (36 functions × 256/512/1024, current full
    sweep 26.7 min, wasm 683,602 bytes) and the `-O3` release profile (AD-030)
-   are recorded (AD-029/AD-030). Remaining: the optional pthreads build and
-   publishing the npm package.
+   are recorded (AD-029/AD-030). The npm package is **published** (2026-11-11)
+   through the tag-triggered `publish` workflow with npm trusted publishing and
+   provenance (AD-031). Remaining: the optional pthreads build.
 
 Risks:
 

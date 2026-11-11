@@ -1,10 +1,13 @@
 {
   "name": "highmap-wasm",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "WebAssembly port of the HighMap terrain generation library (CPU-only), usable from Node and the browser",
   "type": "module",
   "license": "LGPL-2.1",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mode777/highmap-wasm.git"
+  },
   "sideEffects": false,
   "engines": {
     "node": ">=18"

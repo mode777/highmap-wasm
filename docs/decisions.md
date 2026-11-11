@@ -330,3 +330,32 @@ marks the old one superseded — entries are never edited in place.
   Rationale: `-Os` was an unmeasured bootstrap default and is dominated on
   every cell that dominates wall time; this is the cheapest remaining phase-3
   gain and does not require pthreads, SIMD or a deployment change.
+- **AD-031 - Tag-triggered npm releases with trusted publishing.**
+  (2026-11-11) The package is published to npm only by
+  `.github/workflows/publish.yml`, triggered by pushing a `v*` tag:
+  - **Validation before any work.** `scripts/release-guard.mjs` requires a
+    `vX.Y.Z[-prerelease]` tag whose version equals `package.json` (the tag
+    never overrides the manifest), and the job requires the tagged commit to
+    be reachable from `main` so only code that passed main-branch CI ships.
+  - **Rebuild, don't reuse.** The job rebuilds the wasm/JS artifacts from the
+    tagged commit with the pinned Emscripten 6.0.13 toolchain and runs the
+    full `npm test` suite; it never publishes an artifact from another commit.
+  - **Trusted publishing, no token.** Publishing authenticates with npm OIDC
+    trusted publishing (`id-token: write`) and `--provenance`; no `NPM_TOKEN`
+    secret exists. The workflow installs npm >= 11.15 because the Node 24
+    runner image may bundle an older CLI. npm validates `repository.url`, so
+    `package.json` declares it.
+  - **Dist-tags.** Stable `X.Y.Z` publishes under `latest`; a prerelease
+    `X.Y.Z-<suffix>` publishes under `next` and is marked as a GitHub
+    prerelease, so a beta never becomes the default install. A duplicate
+    version fails before publishing, and `concurrency` prevents overlapping
+    releases.
+  - **First public version.** `0.1.0`, validated first with a `v0.1.0-rc.1`
+    prerelease within npm's two-day trusted-publisher validation window.
+  - **Release record.** After a successful publish the workflow creates the
+    GitHub Release with generated notes and source archives; together with the
+    public tagged commit this carries the LGPL-2.1 source-availability
+    evidence for the wasm binary.
+  Rationale: releases must be reproducible from the tag and traceable through
+  provenance, and a long-lived npm token would be the weakest credential in
+  the repository. See `docs/releasing.md`.

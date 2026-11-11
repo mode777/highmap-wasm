@@ -8,9 +8,9 @@ const pkg = JSON.parse(
 ) as Record<string, unknown>;
 
 describe("package scaffold", () => {
-  it("is a private ESM package with no runtime dependencies", () => {
+  it("is a public ESM package with no runtime dependencies", () => {
     expect(pkg["type"]).toBe("module");
-    expect(pkg["private"]).toBe(true);
+    expect(pkg["private"]).toBeUndefined();
     expect(pkg["dependencies"]).toBeUndefined();
   });
 

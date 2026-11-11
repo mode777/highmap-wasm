@@ -4,7 +4,7 @@
 > terrain generation library — CPU-only, no native dependencies, one npm
 > package for Node and the browser.
 
-**Status: 0.0.x, unpublished.** A curated CPU-only build of the HighMap C++
+**Status: 0.1.x, published on npm.** A curated CPU-only build of the HighMap C++
 library compiled with Emscripten + embind, wrapped in a TypeScript API
 modeled on the [pyHighMap](https://github.com/otto-link/pyHighMap) Python
 bindings. The API surface (36 functions, enforced against the binding
@@ -22,8 +22,11 @@ module-family by module-family toward the full curated API — see
 
 ## Quick start
 
-Not yet published to npm; build from source (see Development) and import the
-local package:
+```sh
+npm install highmap-wasm
+```
+
+The same import works in Node >= 18, browsers, and Web Workers:
 
 <!-- quickstart:start -->
 ```js
@@ -163,6 +166,15 @@ Architecture and decision log: `docs/decisions.md`. Port research:
 `docs/wasm-port-research.md`. Porting lessons for the remaining GPU-only
 algorithms: `docs/porting-learnings.md`. This repository is spec-driven with
 OpenSpec (`openspec/`).
+
+## Releasing
+
+Releases are tag-driven: bump `package.json`, commit, tag `vX.Y.Z`, and push
+the tag. The `publish` workflow rebuilds and tests the tagged commit,
+publishes to npm with trusted publishing and provenance, and creates the
+GitHub Release. Prereleases (`vX.Y.Z-<suffix>`) go to the `next` dist-tag;
+stable versions go to `latest`. See `docs/releasing.md` for the one-time
+setup and the verification steps.
 
 ## License
 
