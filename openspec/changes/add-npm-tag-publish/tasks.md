@@ -13,7 +13,7 @@
 
 ## 3. Tag-triggered publish workflow
 
-- [ ] 3.1 Add `.github/workflows/publish.yml` triggered by `push: tags: ['v*']` with non-cancelling `npm-publish` concurrency, `environment: npm-publish`, job permissions `contents: write` + `id-token: write`, and a full-history/submodule checkout; verification: the file parses and `gh workflow view publish.yml` lists it after the change is pushed.
+- [x] 3.1 Add `.github/workflows/publish.yml` triggered by `push: tags: ['v*']` with non-cancelling `npm-publish` concurrency, `environment: npm-publish`, job permissions `contents: write` + `id-token: write`, and a full-history/submodule checkout; verification: the file parses and `gh workflow view publish.yml` lists it after the change is pushed.
 - [x] 3.2 Wire the guard steps in order — SemVer/version check via `scripts/release-guard.mjs`, ancestry check with `git merge-base --is-ancestor "$GITHUB_SHA" origin/main`, and duplicate-version check with `npm view "highmap-wasm@$VERSION" version` failing when the lookup succeeds; verification: the ancestry and duplicate commands are runnable locally against the current checkout and the script path exits correctly.
 - [x] 3.3 Reuse the proven build steps from `build-wasm.yml` (cached emsdk 6.0.13, `npm ci`, `scripts/build-wasm.sh`, `node scripts/build-js.mjs`, `npm test`) inside the publish job; verification: the same command sequence passes locally after the metadata change.
 - [x] 3.4 Add the publish stage: install `npm@11`, print `npm --version`, run `scripts/release-pack-check.mjs`, then `npm publish --provenance --access public --tag "$DIST_TAG"` with no token secret referenced; verification: a workflow-level grep shows `id-token: write`, `--provenance`, `--tag`, and no `NPM_TOKEN`/`secrets.NPM`.
@@ -28,7 +28,7 @@
 ## 5. Integration verification
 
 - [x] 5.1 Run the full local pipeline (`npm run build`, `npx vitest run`, `npm test`) and confirm the published file list via `node scripts/release-pack-check.mjs`; verify the tarball contains only `dist/`, `README.md`, `LICENSE`, and `THIRD_PARTY_LICENSES.md`.
-- [ ] 5.2 After pushing the change, confirm `gh workflow view publish.yml` resolves and a `workflow_dispatch`-less tag trigger is the only entry; verify no branch or pull-request trigger exists in the file.
+- [x] 5.2 After pushing the change, confirm `gh workflow view publish.yml` resolves and a `workflow_dispatch`-less tag trigger is the only entry; verify no branch or pull-request trigger exists in the file.
 
 ## Workflow follow-up
 
